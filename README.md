@@ -1,1 +1,1 @@
-# Supabase Auth in Next JS
+# Project_CHR
