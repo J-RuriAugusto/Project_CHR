@@ -14,7 +14,7 @@ export default async function AdminDashboard() {
   } = await supabase.auth.getSession();
 
   if (!session) {
-    return redirect('/login');
+    return redirect('/');
   }
 
   // Fetch user data from the users table
