@@ -208,7 +208,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
       )}
       
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">User Management</h3>
+        <h3 className="text-lg text-black font-medium">User Management</h3>
         <div className="flex items-center space-x-4">
           <button
             onClick={handleAddClick}
@@ -220,14 +220,14 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
             Add User
           </button>
           <div className="flex items-center">
-            <label htmlFor="role-filter" className="mr-2 text-sm font-medium text-gray-700">
+            <label htmlFor="role-filter" className="mr-2 text-sm font-medium text-black">
               Filter by role:
             </label>
             <select
               id="role-filter"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+              className="border border-gray-300 rounded-md shadow-sm p-2 text-sm text-black"
             >
               <option value="all">All Roles</option>
               {roles.map(role => (
@@ -242,14 +242,14 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
         <table className="min-w-full bg-white border border-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">First Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Last Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-black">
             {filteredUsers.map((user) => (
               <tr key={user.id} className="bg-white hover:bg-gray-50">
                 {editingUser && editingUser.id === user.id ? (
@@ -299,7 +299,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
                       </button>
                       <button
                         onClick={handleCancelEdit}
-                        className="text-gray-600 hover:text-gray-900"
+                        className="text-black hover:text-gray-900"
                       >
                         Cancel
                       </button>
@@ -307,10 +307,10 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
                   </>
                 ) : (
                   <>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.first_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.last_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{user.first_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">{user.last_name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClasses(user.role)}`}>
                         {user.role}
                       </span>
@@ -341,7 +341,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={5} className="px-6 py-4 text-center text-sm text-black">
                   No users found
                 </td>
               </tr>
@@ -354,15 +354,15 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
       {userToDelete && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <h3 className="text-lg font-medium text-black mb-4">Confirm Delete</h3>
+            <p className="text-sm text-black mb-4">
               Are you sure you want to delete user <span className="font-medium">{userToDelete.email}</span>? 
               This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleCancelDelete}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                className="px-4 py-2 bg-gray-100 text-black rounded-md hover:bg-gray-200"
               >
                 Cancel
               </button>
@@ -382,48 +382,48 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
       {showAddForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto w-full">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
+            <h3 className="text-lg font-medium text-white mb-4">Add New User</h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                <label htmlFor="email" className="block text-sm font-medium text-black">Email</label>
                 <input
                   type="email"
                   id="email"
                   value={newUser.email}
                   onChange={(e) => handleNewUserChange('email', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 text-black block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
+                <label htmlFor="first_name" className="block text-sm font-medium text-black">First Name</label>
                 <input
                   type="text"
                   id="first_name"
                   value={newUser.first_name}
                   onChange={(e) => handleNewUserChange('first_name', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 text-black block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Last Name</label>
+                <label htmlFor="last_name" className="block text-sm font-medium text-black">Last Name</label>
                 <input
                   type="text"
                   id="last_name"
                   value={newUser.last_name}
                   onChange={(e) => handleNewUserChange('last_name', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 text-black block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   required
                 />
               </div>
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
+                <label htmlFor="role" className="block text-sm font-medium text-black">Role</label>
                 <select
                   id="role"
                   value={newUser.role}
                   onChange={(e) => handleNewUserChange('role', e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  className="mt-1 text-black block w-full border border-gray-300 rounded-md shadow-sm p-2"
                   required
                 >
                   {roles.map(role => (
@@ -434,7 +434,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
               <div className="mt-5 flex justify-end space-x-3">
                 <button
                   onClick={handleCancelAdd}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                  className="px-4 py-2 bg-gray-100 text-black rounded-md hover:bg-gray-200"
                 >
                   Cancel
                 </button>

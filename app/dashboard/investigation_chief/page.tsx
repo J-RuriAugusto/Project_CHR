@@ -2,7 +2,6 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { sign } from 'crypto';
 
 export default async function InvestigationChiefDashboard() {
   const signOut = async () => {
@@ -88,7 +87,7 @@ export default async function InvestigationChiefDashboard() {
         <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-midnightNavy">
-              Welcome, Chief {userData.first_name} {userData.last_name}!
+              Welcome, Investigation Chief {userData.first_name} {userData.last_name}!
             </h1>
             <p className="text-base font-normal text-midnightNavy mt-1">
               Monitor ongoing investigations and ensure timely case resolution.
@@ -211,9 +210,9 @@ export default async function InvestigationChiefDashboard() {
                   <h2 className="text-base text-midnightNavy font-semibold">
                     Urgent Cases
                   </h2>
-                  <a href="#" className="text-sm text-slateGray font-semibold">
+                  <Link href="/dashboard/investigation_chief/docket" className="text-sm text-slateGray font-semibold">
                     View All
-                  </a>
+                  </Link>
                 </div>
 
                 {/* This Week */}

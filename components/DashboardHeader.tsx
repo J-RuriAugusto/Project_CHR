@@ -22,10 +22,10 @@ export default async function DashboardHeader({ firstName, lastName, role }: Das
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-black">
               {role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} Dashboard
             </h1>
-            <p className="text-gray-600">
+            <p className="text-black">
               Welcome, {firstName} {lastName}
             </p>
           </div>
