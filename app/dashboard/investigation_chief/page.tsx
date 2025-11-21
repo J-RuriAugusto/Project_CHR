@@ -2,6 +2,10 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+<<<<<<< Updated upstream
+=======
+import ViewCaseButton from '@/components/ViewCaseButton'; // Import the client wrapper
+>>>>>>> Stashed changes
 
 export default async function InvestigationChiefDashboard() {
   const signOut = async () => {
@@ -243,9 +247,7 @@ export default async function InvestigationChiefDashboard() {
                       </div>
                     </div>
                     <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                      <button className="text-white text-xs font-semibold">
-                        VIEW CASE
-                      </button>
+                      <ViewCaseButton caseId="CHR-VII-2025-0042" />
                     </div>
                   </div>
 
@@ -273,9 +275,7 @@ export default async function InvestigationChiefDashboard() {
                       </div>
                     </div>
                     <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                      <button className="text-white text-xs font-semibold">
-                        VIEW CASE
-                      </button>
+                      <ViewCaseButton caseId="CHR-VII-2025-0042" />
                     </div>
                   </div>
                 </div>
@@ -308,9 +308,7 @@ export default async function InvestigationChiefDashboard() {
                       </div>
                     </div>
                     <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                      <button className="text-white text-xs font-semibold">
-                        VIEW CASE
-                      </button>
+                      <ViewCaseButton caseId="CHR-VII-2025-0042" />
                     </div>
                   </div>
 
@@ -338,9 +336,7 @@ export default async function InvestigationChiefDashboard() {
                       </div>
                     </div>
                     <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                      <button className="text-white text-xs font-semibold">
-                        VIEW CASE
-                      </button>
+                      <ViewCaseButton caseId="CHR-VII-2025-0042" />
                     </div>
                   </div>
 
@@ -368,9 +364,7 @@ export default async function InvestigationChiefDashboard() {
                       </div>
                     </div>
                     <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                      <button className="text-white text-xs font-semibold">
-                        VIEW CASE
-                      </button>
+                      <ViewCaseButton caseId="CHR-VII-2025-0042" />
                     </div>
                   </div>
                 </div>
