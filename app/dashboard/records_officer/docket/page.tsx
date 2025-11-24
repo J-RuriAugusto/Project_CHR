@@ -21,7 +21,7 @@ export default async function Docket() {
         .eq('email', session.user.email)
         .single();
 
-    if (error || !userData || userData.role !== 'investigation_chief') {
+    if (error || !userData || userData.role !== 'records_officer') {
         await supabase.auth.signOut();
         return redirect('/login?message=You do not have the required permissions');
     }

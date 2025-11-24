@@ -1,10 +1,20 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DashboardHeader from '@/components/DashboardHeader';
+import Image from 'next/image';
+import Link from 'next/link';
+import { sign } from 'crypto';
 
 export default async function RecordsOfficerDashboard() {
+  const signOut = async () => {
+    'use server';
+
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    return redirect('/');
+  };
+
   const supabase = createClient();
-  
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -13,7 +23,7 @@ export default async function RecordsOfficerDashboard() {
     return redirect('/');
   }
 
-  // Fetch user data from the users table
+  // Fetch user data
   const { data: userData, error } = await supabase
     .from('users')
     .select('first_name, last_name, role')
@@ -26,32 +36,427 @@ export default async function RecordsOfficerDashboard() {
   }
 
   return (
-    <div>
-      <DashboardHeader 
-        firstName={userData.first_name} 
-        lastName={userData.last_name} 
-        role={userData.role} 
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Records Officer Dashboard</h2>
-          <p className="text-gray-600">
-            Welcome to your dashboard. Here you can manage case records and documentation.
-          </p>
-          
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="bg-cyan-50 p-4 rounded-lg">
-              <h3 className="font-medium text-cyan-800">Total Records</h3>
-              <p className="text-cyan-600 text-2xl font-bold">1,247</p>
+    <div className="h-screen flex bg-gray-50">
+      {/* LEFT COLUMN */}
+      <aside className="w-60 bg-midnightNavy border-r shadow-sm flex flex-col justify-between p-4">
+        <div className="flex justify-center mb-4">
+          <img
+            src="/cmms-logo2.png"
+            alt="Logo"
+            className="w-auto h-auto"
+          />
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex-1 mt-2">
+          <ul className="space-y-4">
+            <li>
+              <Link
+                href="/dashboard/records_officer"
+                className="flex justify-center space-x-3 text-base text-paleSky font-semibold hover:text-white transition"
+              >
+                <img src="/icon5.png" alt="Dashboard" className="w-5 h-5" />
+                <span>Dashboard</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/dashboard/records_officer/docket"
+                className="flex justify-center space-x-3 text-base text-paleSky font-semibold hover:text-white transition"
+              >
+                <img src="/icon7.png" alt="Docker" className="w-5 h-5" />
+                <span>Docker</span>
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        {/* Logout button at bottom */}
+        <form action={signOut} className="pt-4 border-t">
+          <button
+            type="submit"
+            className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
+          >
+            <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </form>
+      </aside>
+
+      {/* MIDDLE COLUMN */}
+      <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
+        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-midnightNavy">
+              Welcome, Officer {userData.first_name} {userData.last_name}!
+            </h1>
+            <p className="text-base font-normal text-midnightNavy mt-1">
+              Monitor ongoing investigations and ensure timely case resolution.
+            </p>
+          </div>
+          {/* USER INFO */}
+          <div className="flex items-center gap-4">
+            <button className="p-2 rounded-full hover:bg-snowWhite transition">
+              <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
+            </button>
+
+            <button className="relative p-2">
+              <img src="/icon10.png" alt="Notifications" className="w-6 h-6" />
+              <span className="absolute top-1 right-1 bg-crimsonRose text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
+                3
+              </span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold text-midnightNavy">
+                  {userData.first_name} {userData.last_name}
+                </p>
+                <p className="text-sm text-midnightNavy">{userData.role}</p>
+              </div>
+
+              <img
+                src="/icon11.png"
+                alt="User Avatar"
+                className="w-12 h-12 rounded-full border border-gray-200"
+              />
             </div>
-            <div className="bg-amber-50 p-4 rounded-lg">
-              <h3 className="font-medium text-amber-800">Pending Archival</h3>
-              <p className="text-amber-600 text-2xl font-bold">28</p>
+          </div>
+        </div>
+
+        <div className="px-6 mt-6 space-y-6">
+          {/* Dashboard main content */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-base text-midnightNavy font-semibold">My Progress</h2>
+
+            {/* Dashboard Cards */}
+            <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-softBlue p-4 rounded-lg shadow relative overflow-hidden">
+                <div className="absolute top-4 right-4 shadow-sm">
+                  <Image
+                    src="/icon1.png"
+                    alt="Active Cases Icon"
+                    width={45}
+                    height={45}
+                    className="object-contain"
+                  />
+                </div>
+
+                <div className="pt-10">
+                  <h6 className="text-6xl text-steelBlue font-semibold">30</h6>
+                  <h3 className="text-base text-steelBlue font-semibold">Total Active Cases</h3>
+                  <p className="text-sm text-skyRoyal font-semibold">+5 this month</p>
+                </div>
+              </div>
+
+              <div className="bg-babyPink p-4 rounded-lg shadow relative overflow-hidden">
+                <div className="absolute top-4 right-4 shadow-sm">
+                  <Image
+                    src="/icon2.png"
+                    alt="Overdue Cases Icon"
+                    width={45}
+                    height={45}
+                    className="object-contain"
+                  />
+                </div>
+                <div className="pt-10">
+                  <h6 className="text-6xl text-crimsonRose font-semibold">10</h6>
+                  <h3 className="text-base text-crimsonRose font-semibold">Overdue Cases</h3>
+                  <p className="text-sm text-dustyCoral font-semibold">+2 this month</p>
+                </div>
+              </div>
+
+              <div className="bg-paleCream p-4 rounded-lg shadow relative overflow-hidden">
+                <div className="absolute top-4 right-4 shadow-sm">
+                  <Image
+                    src="/icon3.png"
+                    alt="Pending Review Icon"
+                    width={45}
+                    height={45}
+                    className="object-contain"
+                  />
+                </div>
+                <div className="pt-10">
+                  <h6 className="text-6xl text-antiqueGold font-semibold">10</h6>
+                  <h3 className="text-base text-antiqueGold font-semibold">Pending for Review/Approval</h3>
+                  <p className="text-sm text-mutedMustard font-semibold">+2 this month</p>
+                </div>
+              </div>
+
+              <div className="bg-mintGreen p-4 rounded-lg shadow relative overflow-hidden">
+                <div className="absolute top-4 right-4 shadow-sm">
+                  <Image
+                    src="/icon4.png"
+                    alt="Completed Cases Icon"
+                    width={45}
+                    height={45}
+                    className="object-contain"
+                  />
+                </div>
+                <div className="pt-10">
+                  <h6 className="text-6xl text-emeraldGreen font-semibold">10</h6>
+                  <h3 className="text-base text-emeraldGreen font-semibold">Completed Cases</h3>
+                  <p className="text-sm text-mintyGreen font-semibold">+3 this month</p>
+                </div>
+              </div>
             </div>
-            <div className="bg-emerald-50 p-4 rounded-lg">
-              <h3 className="font-medium text-emerald-800">Recent Updates</h3>
-              <p className="text-emerald-600 text-2xl font-bold">15</p>
+          </div>
+
+          {/* Pending Approvals / Review + Case Analytics Section */}
+          <div className="bg-white shadow rounded-lg p-6 mt-6">
+            <div className="flex flex-col lg:flex-row justify-between">
+              {/* LEFT SIDE - Pending Approvals / Review */}
+              <div className="flex-1 pr-0 lg:pr-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base text-midnightNavy font-semibold">
+                    Urgent Cases
+                  </h2>
+                  <a href="#" className="text-sm text-slateGray font-semibold">
+                    View All
+                  </a>
+                </div>
+
+                {/* This Week */}
+                <h3 className="text-sm text-slateBlue font-semibold mb-2">This Week</h3>
+                <div className="space-y-3 mb-6">
+
+                  {/* CARD 1 */}
+                  <div className="flex bg-snowWhite rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-midnightNavy w-20 flex flex-col items-center justify-center">
+                      <p className="text-base font-semibold text-white">25</p>
+                      <p className="text-sm font-semibold text-white">Oct</p>
+                    </div>
+
+                    <div className="flex-1 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-charcoalGray">
+                          Case CHR-VII-2025-0042
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center border border-royalAzure text-royalAzure font-semibold rounded-full">
+                          INVESTIGATION
+                        </span>
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center bg-lightYellow text-olive font-semibold rounded-full">
+                          DUE IN 3 DAYS
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
+                      <button className="text-white text-xs font-semibold">
+                        VIEW CASE
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CARD 2 */}
+                  <div className="flex bg-snowWhite rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-midnightNavy w-20 flex flex-col items-center justify-center">
+                      <p className="text-base font-semibold text-white">25</p>
+                      <p className="text-sm font-semibold text-white">Oct</p>
+                    </div>
+
+                    <div className="flex-1 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-charcoalGray">
+                          Case CHR-VII-2025-0042
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center border border-oceanBlue text-oceanBlue font-semibold rounded-full">
+                          LEGAL ASST.
+                        </span>
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center bg-lightYellow text-olive font-semibold rounded-full">
+                          DUE IN 10 DAYS
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
+                      <button className="text-white text-xs font-semibold">
+                        VIEW CASE
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Last Week */}
+                <h3 className="text-sm text-slateBlue font-semibold mb-2">Last Week</h3>
+                <div className="space-y-3">
+
+                  {/* CARD 3 */}
+                  <div className="flex bg-snowWhite rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-midnightNavy w-20 flex flex-col items-center justify-center">
+                      <p className="text-base font-semibold text-white">25</p>
+                      <p className="text-sm font-semibold text-white">Oct</p>
+                    </div>
+
+                    <div className="flex-1 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-charcoalGray">
+                          Case CHR-VII-2025-0042
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center border border-royalAzure text-royalAzure font-semibold rounded-full">
+                          INVESTIGATION
+                        </span>
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center bg-babyPink text-crimsonRose font-semibold rounded-full">
+                          OVERDUE
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
+                      <button className="text-white text-xs font-semibold">
+                        VIEW CASE
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CARD 4 */}
+                  <div className="flex bg-snowWhite rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-midnightNavy w-20 flex flex-col items-center justify-center">
+                      <p className="text-base font-semibold text-white">25</p>
+                      <p className="text-sm font-semibold text-white">Oct</p>
+                    </div>
+
+                    <div className="flex-1 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-charcoalGray">
+                          Case CHR-VII-2025-0042
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center border border-oceanBlue text-oceanBlue font-semibold rounded-full">
+                          LEGAL ASST.
+                        </span>
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center bg-softBlue text-steelBlue font-semibold rounded-full">
+                          DUE IN 14 DAYS
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
+                      <button className="text-white text-xs font-semibold">
+                        VIEW CASE
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CARD 5 */}
+                  <div className="flex bg-snowWhite rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-midnightNavy w-20 flex flex-col items-center justify-center">
+                      <p className="text-base font-semibold text-white">25</p>
+                      <p className="text-sm font-semibold text-white">Oct</p>
+                    </div>
+
+                    <div className="flex-1 p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-charcoalGray">
+                          Case CHR-VII-2025-0042
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center border border-royalAzure text-royalAzure font-semibold rounded-full">
+                          INVESTIGATION
+                        </span>
+                        <span className="text-xs px-3 py-1 w-[110px] flex justify-center items-center bg-softBlue text-steelBlue font-semibold rounded-full">
+                          DUE IN 24 DAYS
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
+                      <button className="text-white text-xs font-semibold">
+                        VIEW CASE
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT SIDE - Case Analytics */}
+              <div className="w-full lg:w-1/3 mt-8 lg:mt-0 border-t lg:border-t-0 lg:border-l border-gray-200 pl-0 lg:pl-6 flex flex-col">
+                {/* Header row */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base text-midnightNavy font-semibold">
+                    Case Analytics
+                  </h2>
+                  <a
+                    href="#"
+                    className="text-sm text-slateGray font-semibold hover:underline-slateGray"
+                  >
+                    Generate Report
+                  </a>
+                </div>
+
+                {/* Charts container */}
+                <div className="flex-1 flex flex-col justify-center items-center space-y-10 py-6">
+                  {/* Chart 1 */}
+                  <div className="w-full max-w-xs">
+                    <h3 className="text-sm font-regular text-mutedSteelBlue mb-2 text-center">
+                      Case Breakdown by Type
+                    </h3>
+                    <div className="flex items-center justify-center space-x-6 pt-4">
+                      <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
+
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-oceanBlue"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            Legal Counseling
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-royalAzure"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            Investigation
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-deepCobalt"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            Torture
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart 2 */}
+                  <div className="w-full max-w-xs">
+                    <h3 className="text-sm font-regular text-mutedSteelBlue mb-2 text-center">
+                      Case Ageing Overview
+                    </h3>
+                    <div className="flex items-center justify-center space-x-6 pt-4">
+                      <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
+
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-paleGreen"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            0 - 30 days
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-tealBlue"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            31 - 60 days
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-3 h-3 rounded-full bg-cobaltBlue"></span>
+                          <span className="text-xs text-deepNavy font-regular">
+                            61 - 120 days
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

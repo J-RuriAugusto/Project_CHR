@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
-import { validateDocketForm, submitDocketForm } from '@/lib/utils/docket-form-helpers';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 
 interface DocketCaseModalProps {
@@ -80,7 +79,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
 
     const [showCalendar, setShowCalendar] = useState(false);
-    const [showDeadlineCalendar, setShowDeadlineCalendar] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
@@ -119,28 +117,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    // Reset form when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            resetForm();
-        }
-    }, [isOpen]);
-
-    const resetForm = () => {
-        setDocketNumber('');
-        setDateReceived(new Date().toLocaleDateString('en-US'));
-        setDeadline(new Date().toLocaleDateString('en-US'));
-        setTypeOfRequest('');
-        setCategory('');
-        setModeOfRequest('');
-        setSelectedRights([]);
-        setVictims([{ name: '', sectors: [] }]);
-        setRespondents([]);
-        setStaff([{ userId: '', email: '' }]);
-        setShowCalendar(false);
-        setShowDeadlineCalendar(false);
-    };
 
     // Rights Violated Handlers
     const toggleRight = (rightId: number) => {
@@ -252,9 +228,9 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         }
     };
 
-    const handleSubmit = async () => {
-        // Validate form
-        const errors = await validateDocketForm({
+    const handleSubmit = () => {
+        console.log('Submitting case...');
+        console.log({
             docketNumber,
             dateReceived,
             deadline,
@@ -266,31 +242,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             respondents,
             staff
         });
-        // If there are errors, show them and stop
-        if (Object.keys(errors).length > 0) {
-            const errorMessages = Object.values(errors).join('\n');
-            alert(`Please fix the following errors:\n\n${errorMessages}`);
-            return;
-        }
-        // Submit form
-        const result = await submitDocketForm({
-            docketNumber,
-            dateReceived,
-            deadline,
-            typeOfRequest,
-            category,
-            modeOfRequest,
-            selectedRights,
-            victims,
-            respondents,
-            staff
-        });
-        if (result.success) {
-            alert('Docket submitted successfully!');
-            onClose(); // This will trigger refresh in DocketContent
-        } else {
-            alert(`Error: ${result.message}`);
-        }
     };
 
     const handleSaveChanges = () => {
@@ -306,31 +257,22 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         return new Date(year, month, 1).getDay();
     };
 
-    const handleDateSelect = (day: number, field: 'received' | 'deadline') => {
+    const handleDateSelect = (day: number) => {
         const selectedDate = new Date(selectedYear, selectedMonth, day);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (field === 'received') {
-            if (selectedDate > today) {
-                alert("Date received cannot be in the future.");
-                return;
-            }
-            setDateReceived(selectedDate.toLocaleDateString('en-US'));
-            setShowCalendar(false);
-        } else {
-            // For deadline, we might want to check if it's before received date
-            const received = new Date(dateReceived);
-            if (!isNaN(received.getTime()) && selectedDate < received) {
-                alert("Deadline cannot be before Date Received.");
-                return;
-            }
-            setDeadline(selectedDate.toLocaleDateString('en-US'));
-            setShowDeadlineCalendar(false);
+        if (selectedDate > today) {
+            alert("Date received cannot be in the future.");
+            return;
         }
+
+        const formattedDate = selectedDate.toLocaleDateString('en-US');
+        setDateReceived(formattedDate);
+        setShowCalendar(false);
     };
 
-    const renderCalendar = (field: 'received' | 'deadline') => {
+    const renderCalendar = () => {
         const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
         const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
         const days = [];
@@ -345,7 +287,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             days.push(
                 <button
                     key={day}
-                    onClick={() => handleDateSelect(day, field)}
+                    onClick={() => handleDateSelect(day)}
                     className="p-2 hover:bg-blue-100 rounded text-sm"
                 >
                     {day}
@@ -354,7 +296,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         }
 
         return (
-            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-64">
+            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10">
                 <div className="flex justify-between items-center mb-4">
                     <button onClick={() => setSelectedMonth(selectedMonth - 1)} className="p-1">←</button>
                     <span>{monthNames[selectedMonth]} {selectedYear}</span>
@@ -506,16 +448,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                 className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                             <button
-                                                onClick={() => {
-                                                    setShowCalendar(!showCalendar);
-                                                    setShowDeadlineCalendar(false);
-                                                }}
+                                                onClick={() => setShowCalendar(!showCalendar)}
                                                 className="text-royal hover:text-ash"
                                             >
                                                 <Calendar size={20} />
                                             </button>
                                         </div>
-                                        {showCalendar && renderCalendar('received')}
+                                        {showCalendar && renderCalendar()}
                                     </div>
 
                                     <div>
@@ -540,16 +479,11 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setShowDeadlineCalendar(!showDeadlineCalendar);
-                                                    setShowCalendar(false);
-                                                }}
                                                 className="text-royal hover:text-ash"
                                             >
                                                 <Calendar size={20} />
                                             </button>
                                         </div>
-                                        {showDeadlineCalendar && renderCalendar('deadline')}
                                     </div>
 
                                     <div>
