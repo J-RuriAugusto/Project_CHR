@@ -96,7 +96,8 @@ export async function validateDocketForm(formData: DocketFormData): Promise<Vali
     }
 
     // Staff validation
-    if (formData.staff[0].userId === '') {
+    const assignedStaff = formData.staff.filter(s => s.userId.trim() !== '');
+    if (assignedStaff.length === 0) {
         errors.staff = 'At least one staff member must be assigned';
     }
 
@@ -128,7 +129,7 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
         selectedRightIds: formData.selectedRights,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),
         respondents: respondentsWithNames.map(r => ({ name: r.name, sectorNames: r.sectors })),
-        staffInChargeId: formData.staff[0].userId
+        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId)
     };
 
     // Submit to database

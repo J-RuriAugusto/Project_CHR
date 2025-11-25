@@ -8,12 +8,15 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  status: string;
 }
 
 interface UserManagementTableProps {
   users: User[];
   filterRole: string;
   filterStatus: string;
+  selectedRows: string[];
+  onSelectionChange: (selectedIds: string[]) => void;
 }
 
 // Role badge component with color coding
@@ -36,18 +39,16 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-export default function UserManagementTable({ users, filterRole, filterStatus }: UserManagementTableProps) {
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+export default function UserManagementTable({ users, filterRole, filterStatus, selectedRows, onSelectionChange }: UserManagementTableProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [userStatuses, setUserStatuses] = useState<Record<string, 'active' | 'inactive'>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCheckboxChange = (userId: string) => {
-    setSelectedRows(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+    onSelectionChange(
+      selectedRows.includes(userId)
+        ? selectedRows.filter(id => id !== userId)
+        : [...selectedRows, userId]
     );
   };
 
@@ -67,6 +68,22 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
 
   const handleSaveEdit = async () => {
     if (!editingUser) return;
+
+    // Check for changes
+    const originalUser = users.find(u => u.id === editingUser.id);
+    if (originalUser) {
+      const hasChanges =
+        originalUser.email !== editingUser.email ||
+        originalUser.first_name !== editingUser.first_name ||
+        originalUser.last_name !== editingUser.last_name ||
+        originalUser.role !== editingUser.role;
+
+      if (!hasChanges) {
+        setEditingUser(null);
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
@@ -80,7 +97,8 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
           email: editingUser.email,
           first_name: editingUser.first_name,
           last_name: editingUser.last_name,
-          role: editingUser.role
+          role: editingUser.role,
+          status: editingUser.status
         }),
       });
 
@@ -100,22 +118,43 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
     }
   };
 
-  const toggleUserStatus = (userId: string) => {
-    setUserStatuses(prev => ({
-      ...prev,
-      [userId]: prev[userId] === 'active' ? 'inactive' : 'active'
-    }));
-  };
+  const toggleUserStatus = async (user: User) => {
+    const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
-  const getUserStatus = (userId: string): 'active' | 'inactive' => {
-    return userStatuses[userId] || 'active';
+    try {
+      const response = await fetch('/api/admin/update-user', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          role: user.role,
+          status: newStatus
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      alert('Failed to update status');
+    }
   };
 
   // Filter users based on role and status
   const filteredUsers = users.filter(user => {
     const roleMatch = filterRole === 'all' || user.role === filterRole;
-    const status = getUserStatus(user.id);
-    const statusMatch = filterStatus === 'all' || status === filterStatus;
+    // Case insensitive status match
+    const userStatus = user.status ? user.status.toUpperCase() : 'ACTIVE'; // Default to ACTIVE if null
+    const filterStatusUpper = filterStatus.toUpperCase();
+    const statusMatch = filterStatus === 'all' || userStatus === filterStatusUpper;
     return roleMatch && statusMatch;
   });
 
@@ -159,9 +198,9 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
         </thead>
         <tbody className="divide-y divide-graphiteGray border-b border-ash">
           {filteredUsers.map((user) => {
-            const status = getUserStatus(user.id);
+            const status = user.status ? user.status.toUpperCase() : 'ACTIVE';
             const isHovered = hoveredRow === user.id;
-            
+
             return (
               <tr
                 key={user.id}
@@ -216,10 +255,10 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
                             </option>
                           ))}
                         </select>
-                        <img 
-                          src="/icon16.png" 
-                          alt="dropdown" 
-                          className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" 
+                        <img
+                          src="/icon16.png"
+                          alt="dropdown"
+                          className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                         />
                       </div>
                     </td>
@@ -268,24 +307,21 @@ export default function UserManagementTable({ users, filterRole, filterStatus }:
                         >
                           <img src="/icon17.png" alt="Edit" className="w-5 h-5" />
                         </button>
-                        
+
                         {/* Status Indicator with Toggle */}
                         <button
-                          onClick={() => toggleUserStatus(user.id)}
-                          className={`flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out ${
-                            isHovered 
-                              ? 'w-20 px-3 py-1 rounded-full' 
-                              : 'w-3 h-3 rounded-full'
-                          } ${
-                            status === 'active' ? 'bg-brightGreen' : 'bg-ash'
-                          }`}
+                          onClick={() => toggleUserStatus(user)}
+                          className={`flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out ${isHovered
+                            ? 'w-20 px-3 py-1 rounded-full'
+                            : 'w-3 h-3 rounded-full'
+                            } ${status === 'ACTIVE' ? 'bg-brightGreen' : 'bg-ash'
+                            }`}
                           title={`Toggle status (currently ${status})`}
                         >
                           {isHovered && (
-                            <span className={`text-xs font-medium whitespace-nowrap ${
-                              status === 'active' ? 'text-white' : 'text-white'
-                            }`}>
-                              {status === 'active' ? 'Active' : 'Inactive'}
+                            <span className={`text-xs font-medium whitespace-nowrap ${status === 'ACTIVE' ? 'text-white' : 'text-white'
+                              }`}>
+                              {status === 'ACTIVE' ? 'Active' : 'Inactive'}
                             </span>
                           )}
                         </button>

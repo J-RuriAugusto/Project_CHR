@@ -13,7 +13,7 @@ export interface DocketSubmissionData {
     selectedRightIds: number[];
     victims: { name: string; sectorNames: string[] }[];
     respondents: { name: string; sectorNames: string[] }[];
-    staffInChargeId: string;
+    staffInChargeIds: string[];
 }
 
 export interface SubmissionResult {
@@ -100,7 +100,6 @@ export async function submitDocket(
                 category_id: data.categoryId,
                 mode_of_request_id: data.modeOfRequestId,
                 created_by_user_id: publicUserId, // Use the ID from public.users
-                staff_in_charge_id: data.staffInChargeId,
                 status: 'PENDING'
             })
             .select('id')
@@ -256,6 +255,27 @@ export async function submitDocket(
                         };
                     }
                 }
+            }
+        }
+
+        // 5. Insert staff into docket_staff
+        if (data.staffInChargeIds.length > 0) {
+            const staffToInsert = data.staffInChargeIds.map(userId => ({
+                docket_id: docketId,
+                user_id: userId
+            }));
+
+            const { error: staffError } = await supabase
+                .from('docket_staff')
+                .insert(staffToInsert);
+
+            if (staffError) {
+                console.error('Error inserting docket staff:', staffError);
+                await supabase.from('dockets').delete().eq('id', docketId);
+                return {
+                    success: false,
+                    message: 'Error saving staff assignment'
+                };
             }
         }
 

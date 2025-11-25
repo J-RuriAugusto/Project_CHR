@@ -80,7 +80,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const [selectedRights, setSelectedRights] = useState<number[]>([]);
     const [status, setStatus] = useState<string>('Pending');
 
-    const isEditable = status === 'Pending';
+    const isEditable = status === 'Pending' && currentUserRole !== 'officer';
 
     // Updated state for Victims and Respondents - both support multiple sectors
     const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
@@ -130,6 +130,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const [initialState, setInitialState] = useState<any>(null);
+
     // Fetch details when modal opens
     useEffect(() => {
         if (isOpen && docketId) {
@@ -157,12 +159,29 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 setStaff(details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }]);
 
                 // Format status for display
+                let currentStatus = 'Pending';
                 const docketStatus = details.status || 'PENDING';
                 if (docketStatus === 'FOR REVIEW') {
-                    setStatus('For Review');
+                    currentStatus = 'For Review';
                 } else {
-                    setStatus(docketStatus.charAt(0).toUpperCase() + docketStatus.slice(1).toLowerCase());
+                    currentStatus = docketStatus.charAt(0).toUpperCase() + docketStatus.slice(1).toLowerCase();
                 }
+                setStatus(currentStatus);
+
+                // Set initial state for change detection
+                setInitialState({
+                    docketNumber: details.docketNumber,
+                    dateReceived: details.dateReceived,
+                    deadline: details.deadline,
+                    typeOfRequest: details.typeOfRequestId,
+                    category: details.categoryId || '',
+                    modeOfRequest: details.modeOfRequestId,
+                    selectedRights: details.selectedRights,
+                    victims: details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }],
+                    respondents: details.respondents.length > 0 ? details.respondents : [],
+                    staff: details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }],
+                    status: currentStatus
+                });
             }
         } catch (error) {
             console.error("Failed to fetch docket details", error);
@@ -322,6 +341,40 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     };
 
     const handleSaveChanges = async () => {
+        // Check for changes
+        if (initialState) {
+            const currentFormState = {
+                docketNumber,
+                dateReceived,
+                deadline,
+                typeOfRequest,
+                category,
+                modeOfRequest,
+                selectedRights,
+                victims,
+                respondents,
+                staff,
+                status
+            };
+
+            const hasChanges = JSON.stringify(initialState) !== JSON.stringify(currentFormState);
+
+            // Special check for Officer: if only status can change, check that specifically
+            if (currentUserRole === 'officer') {
+                if (status === initialState.status) {
+                    alert("No changes made.");
+                    return;
+                }
+            } else {
+                // For others, check everything (simplified JSON comparison)
+                // Note: This might be sensitive to order, but for this use case it's likely sufficient
+                // or we can just rely on the fact that if they didn't touch anything, the state objects match.
+                if (JSON.stringify(initialState) === JSON.stringify(currentFormState)) {
+                    alert("No changes made.");
+                    return;
+                }
+            }
+        }
 
         const errors: string[] = [];
 
@@ -409,7 +462,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 selectedRightIds: selectedRights,
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
                 respondents: respondents.map(r => ({ name: r.name, sectorNames: r.sectors })),
-                staffInChargeId: staff[0].userId
+                staffInChargeIds: assignedStaff.map(s => s.userId)
             };
 
             try {
@@ -640,7 +693,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                         <option value="For Review">For Review</option>
 
 
-                                        <option value="Completed">Completed</option>
+                                        {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
                                     </select>
                                 </div>
                                 <button
@@ -658,7 +711,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                             </div>
                         ) : (
                             <div className="p-6 bg-snow">
-                                {!isEditable && (
+                                {!isEditable && currentUserRole !== 'officer' && (
                                     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm font-medium">
                                         Non-pending status cannot be edited. Please change the status to Pending to make changes.
                                     </div>

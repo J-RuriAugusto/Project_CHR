@@ -29,9 +29,10 @@ export async function getDockets(): Promise<DocketListItem[]> {
             updated_at,
             status,
             type_of_request_id,
-            staff_in_charge_id,
             request_types!type_of_request_id (name),
-            users!staff_in_charge_id (first_name, last_name)
+            docket_staff (
+                users (first_name, last_name)
+            )
         `)
         .order('updated_at', { ascending: false });
 
@@ -61,14 +62,25 @@ export async function getDockets(): Promise<DocketListItem[]> {
 
         const daysTillDeadline = getDaysDifference(today, deadlineDate);
 
+        // Format assigned staff
+        let assignedTo = 'Unassigned';
+        if (docket.docket_staff && docket.docket_staff.length > 0) {
+            const staffNames = docket.docket_staff.map((ds: any) =>
+                `${ds.users.first_name} ${ds.users.last_name}`
+            );
+            if (staffNames.length === 1) {
+                assignedTo = staffNames[0];
+            } else {
+                assignedTo = `${staffNames[0]} +${staffNames.length - 1} more`;
+            }
+        }
+
         return {
             id: docket.id,
             docketNumber: docket.docket_number,
             typeOfRequest: docket.request_types?.name || 'Unknown',
             status,
-            assignedTo: docket.users
-                ? `${docket.users.first_name} ${docket.users.last_name}`
-                : 'Unassigned',
+            assignedTo,
             daysTillDeadline,
             lastUpdated: new Date(docket.updated_at).toLocaleDateString('en-US'),
             deadline: deadlineDate
@@ -107,7 +119,10 @@ export async function getDocketDetails(id: string) {
         .select(`
             *,
             request_types!type_of_request_id (id, name),
-            users!staff_in_charge_id (id, email, first_name, last_name)
+            docket_staff (
+                user_id,
+                users (id, email, first_name, last_name)
+            )
         `)
         .eq('id', id)
         .single();
@@ -161,6 +176,12 @@ export async function getDocketDetails(id: string) {
             sectors: p.docket_party_sectors.map((s: any) => s.sectors.name)
         }));
 
+    // Process staff
+    const staff = docket.docket_staff.map((ds: any) => ({
+        userId: ds.users.id,
+        email: ds.users.email
+    }));
+
     return {
         docketNumber: docket.docket_number,
         dateReceived: new Date(docket.date_received).toLocaleDateString('en-US'),
@@ -171,10 +192,7 @@ export async function getDocketDetails(id: string) {
         selectedRights: rights.map((r: any) => r.right_id),
         victims,
         respondents,
-        staff: [{
-            userId: docket.users?.id || '',
-            email: docket.users?.email || ''
-        }],
+        staff: staff.length > 0 ? staff : [{ userId: '', email: '' }],
         status: docket.status || 'PENDING'
     };
 }

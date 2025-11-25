@@ -92,7 +92,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             type_of_request_id: data.typeOfRequestId,
             category_id: data.categoryId,
             mode_of_request_id: data.modeOfRequestId,
-            staff_in_charge_id: data.staffInChargeId,
+            // staff_in_charge_id removed
         };
 
         if (status) {
@@ -108,12 +108,6 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             console.error('Error updating docket:', docketError);
             return { success: false, error: docketError.message };
         }
-
-        // Check if status needs update (if it's in data? No, interface doesn't have it)
-        // We might need to extend the interface or pass status separately.
-        // For now, let's assume status update is handled via handleStatusUpdate or we add it.
-        // The user said "regardless the status", implying we might want to update status too if changed in modal.
-        // The modal has a status dropdown.
 
         // 2. Update Rights (Delete all and re-insert)
         const { error: deleteRightsError } = await supabase
@@ -225,6 +219,33 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
                     }));
                     await supabase.from('docket_party_sectors').insert(sectorsToInsert);
                 }
+            }
+        }
+
+        // 4. Update Staff (Delete all and re-insert)
+        const { error: deleteStaffError } = await supabase
+            .from('docket_staff')
+            .delete()
+            .eq('docket_id', docketId);
+
+        if (deleteStaffError) {
+            console.error('Error deleting existing staff:', deleteStaffError);
+            return { success: false, error: 'Failed to update staff' };
+        }
+
+        if (data.staffInChargeIds.length > 0) {
+            const staffToInsert = data.staffInChargeIds.map(userId => ({
+                docket_id: docketId,
+                user_id: userId
+            }));
+
+            const { error: insertStaffError } = await supabase
+                .from('docket_staff')
+                .insert(staffToInsert);
+
+            if (insertStaffError) {
+                console.error('Error inserting new staff:', insertStaffError);
+                return { success: false, error: 'Failed to save new staff' };
             }
         }
 

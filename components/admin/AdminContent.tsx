@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import UserManagementTable from './UserManagementTable';
 import AddUserModal from './AddUserModal';
@@ -11,6 +10,7 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  status: string;
 }
 
 interface AdminContentProps {
@@ -30,7 +30,65 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const basePath = `/dashboard/${userData.role}`;
+  // New state for bulk actions
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  // Search filtering
+  const searchFilteredUsers = users.filter(user => {
+    if (!searchQuery) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      user.email.toLowerCase().includes(searchLower) ||
+      user.first_name.toLowerCase().includes(searchLower) ||
+      user.last_name.toLowerCase().includes(searchLower) ||
+      user.role.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const handleBulkStatusUpdate = async (status: 'ACTIVE' | 'INACTIVE') => {
+    if (selectedRows.length === 0) return;
+
+    // Filter out users who already have the target status
+    const usersToUpdate = selectedRows.filter(userId => {
+      const user = users.find(u => u.id === userId);
+      const currentStatus = user?.status?.toUpperCase() || 'ACTIVE';
+      return currentStatus !== status;
+    });
+
+    if (usersToUpdate.length === 0) {
+      alert(`Selected users are already ${status}`);
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const response = await fetch('/api/admin/bulk-update-users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userIds: usersToUpdate,
+          status
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update users');
+      }
+
+      setSelectedRows([]);
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error bulk updating users:', error);
+      alert(error.message || 'Failed to update users');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -70,14 +128,13 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
 
           {/* USER INFO */}
           <div className="flex items-center gap-16">
-            <div 
+            <div
               className="relative flex items-center"
               onMouseEnter={() => setIsSearchOpen(true)}
               onMouseLeave={() => setIsSearchOpen(false)}
             >
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                isSearchOpen ? 'w-80 opacity-100' : 'w-0 opacity-0'
-              }`}>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'w-80 opacity-100' : 'w-0 opacity-0'
+                }`}>
                 <input
                   type="text"
                   placeholder="Search a user or a keyword..."
@@ -114,10 +171,24 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
             <h2 className="text-xl font-bold text-midnightNavy">Recent</h2>
             <div className="flex items-center gap-3">
               {/* Mark as Active/Inactive buttons */}
-              <button className="px-4 py-0.5 bg-white text-charcoal rounded-full text-sm font-semibold hover:bg-gray-50 border border-charcoal">
+              <button
+                onClick={() => handleBulkStatusUpdate('ACTIVE')}
+                disabled={isBulkUpdating || selectedRows.length === 0}
+                className={`px-4 py-0.5 rounded-full text-sm font-semibold border border-charcoal transition ${isBulkUpdating || selectedRows.length === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-charcoal hover:bg-gray-50'
+                  }`}
+              >
                 Mark as Active
               </button>
-              <button className="px-2 py-0.5 bg-white text-charcoal rounded-full text-sm font-semibold hover:bg-gray-50 border border-charcoal">
+              <button
+                onClick={() => handleBulkStatusUpdate('INACTIVE')}
+                disabled={isBulkUpdating || selectedRows.length === 0}
+                className={`px-2 py-0.5 rounded-full text-sm font-semibold border border-charcoal transition ${isBulkUpdating || selectedRows.length === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-charcoal hover:bg-gray-50'
+                  }`}
+              >
                 Mark as Inactive
               </button>
 
@@ -129,8 +200,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                   className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal hover:bg-gray-50 appearance-none pr-8 cursor-pointer truncate border border-gray-300"
                 >
                   <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
                 </select>
 
                 <img src="/icon16.png" alt="dropdown" className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -155,7 +226,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                 <img src="/icon16.png" alt="dropdown" className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              <button 
+              <button
                 onClick={() => setIsAddUserModalOpen(true)}
                 className="px-4 py-2 bg-blue text-white rounded-md text-sm font-semibold hover:bg-highlight flex items-center gap-2"
               >
@@ -169,15 +240,21 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
 
           {/* Table with padding */}
           <div className="bg-white shadow-sm overflow-hidden mx-6">
-            <UserManagementTable users={users} filterRole={filterRole} filterStatus={filterStatus} />
+            <UserManagementTable
+              users={searchFilteredUsers}
+              filterRole={filterRole}
+              filterStatus={filterStatus}
+              selectedRows={selectedRows}
+              onSelectionChange={setSelectedRows}
+            />
           </div>
         </div>
       </main>
 
       {/* Add User Modal */}
-      <AddUserModal 
-        isOpen={isAddUserModalOpen} 
-        onClose={() => setIsAddUserModalOpen(false)} 
+      <AddUserModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
       />
     </div>
   );
