@@ -8,8 +8,8 @@ import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
 
 export default async function InvestigationChiefDashboard() {
-  const supabase = createClient();
-  const currentPath = headers().get("next-url") || "/";
+  const supabase = await createClient();
+  const currentPath = (await headers()).get("next-url") || "/";
   const {
     data: { session },
   } = await supabase.auth.getSession();

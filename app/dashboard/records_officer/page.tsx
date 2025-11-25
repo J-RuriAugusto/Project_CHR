@@ -6,7 +6,7 @@ import { signOut } from '../../../components/actions';
 import { sign } from 'crypto';
 
 export default async function RecordsOfficerDashboard() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const {
     data: { session },
