@@ -25,6 +25,7 @@ module.exports = {
         dustyBlue: '#5E8296',
         royalBlue: '#2479C9',
         royal: '#0D99FF',
+        lightBlue: '#1994D7',
         navyBlue: '#073A55',
         blueLight: '#AAD6F0',
         mistyBlue: '#BFD8FA',
