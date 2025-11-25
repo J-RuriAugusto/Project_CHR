@@ -21,8 +21,8 @@ function StatusBadge({ status }: { status: string }) {
         'Completed': 'bg-brightGreen text-white',
         'Pending': 'bg-white text-golden border border-golden',
         'For Review': 'bg-transparent text-golden border border-golden',
-        'Terminated': 'bg-transparent text-gray border border-gray',
-        'Void': 'bg-transparent text-purple-500 border border-purple-500'
+
+
     };
 
     const style = statusStyles[status as keyof typeof statusStyles] || 'bg-gray-200 text-gray-800';
@@ -97,12 +97,19 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
                         className={`${selectedDockets.includes(docket.id) ? 'bg-highlight' : 'hover:bg-sky'} cursor-pointer transition-colors duration-150`}
                         onClick={() => onRowClick(docket.id)}
                     >
-                        <td className="px-4 py-2">
+                        <td
+                            className="px-4 py-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectionChange(docket.id);
+                            }}
+                        >
                             <input
                                 type="checkbox"
                                 className="rounded border-gray-300"
                                 checked={selectedDockets.includes(docket.id)}
-                                onChange={(e) => {
+                                onChange={() => { }} // Controlled component, handled by parent or td click
+                                onClick={(e) => {
                                     e.stopPropagation();
                                     onSelectionChange(docket.id);
                                 }}
@@ -119,7 +126,7 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
                         </td>
                         <td className="px-4 py-2 text-sm text-black">{docket.assignedTo}</td>
                         <td className="px-4 py-2 text-sm text-deepNavy">
-                            {['Completed', 'Terminated', 'Void', 'For Review'].includes(docket.status) ? (
+                            {['Completed', 'For Review'].includes(docket.status) ? (
                                 <div className="pl-14">—</div>
                             ) : (
                                 docket.daysTillDeadline < 0

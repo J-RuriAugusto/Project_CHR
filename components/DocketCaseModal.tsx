@@ -293,10 +293,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         }
     };
 
-    const handleSaveChanges = () => {
-        console.log('Saving changes...');
-    };
-
     // Calendar logic
     const getDaysInMonth = (month: number, year: number): number => {
         return new Date(year, month + 1, 0).getDate();
@@ -918,12 +914,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                     className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
                                 >
                                     Submit for Docketing
-                                </button>
-                                <button
-                                    onClick={handleSaveChanges}
-                                    className="bg-soft text-coal px-6 py-2 rounded-lg hover:bg-gray-300 font-medium"
-                                >
-                                    Save Changes
                                 </button>
                             </div>
                         </div>

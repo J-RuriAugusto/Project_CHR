@@ -7,7 +7,7 @@ import DocketCaseModal from "@/components/DocketCaseModal";
 import DocketDetailsModal from "@/components/DocketDetailsModal";
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
-import { updateDocketStatus } from '@/lib/actions/docket-actions';
+import { updateDocketStatus, deleteDockets } from '@/lib/actions/docket-actions';
 
 interface DocketContentProps {
     userData: {
@@ -73,6 +73,28 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
             fetchDockets(); // Refresh data
         } else {
             alert('Failed to update status');
+        }
+    };
+
+    const handleDeleteDockets = async () => {
+        if (selectedDockets.length === 0) {
+            alert("Please select at least one docket to delete.");
+            return;
+        }
+
+        if (!confirm('Are you sure you want to delete the selected dockets? This action cannot be undone.')) {
+            return;
+        }
+
+        setIsUpdating(true);
+        const result = await deleteDockets(selectedDockets);
+        setIsUpdating(false);
+
+        if (result.success) {
+            setSelectedDockets([]); // Clear selection
+            fetchDockets(); // Refresh data
+        } else {
+            alert('Failed to delete dockets: ' + result.error);
         }
     };
 
@@ -199,9 +221,9 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     <option value="Active">Active</option>
                                     <option value="Completed">Completed</option>
                                     <option value="For Review">For Review</option>
-                                    <option value="Void">Void</option>
-                                    <option value="Terminated">Terminated</option>
-                                    <option value="all">All</option>
+
+
+                                    <option value="all">All Status</option>
                                 </select>
 
                                 <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +244,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                             {type.name}
                                         </option>
                                     ))}
-                                    <option value="all">All</option>
+                                    <option value="all">All Requests</option>
                                 </select>
 
                                 <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,17 +277,26 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                         }
                                     }}
                                     disabled={isUpdating}
-                                    className="w-full px-2 py-2 rounded-md bg-gray text-white text-center text-sm font-semibold hover:bg-opacity-90 appearance-none cursor-pointer truncate"
+                                    className="w-full px-2 py-2 rounded-md bg-midnightNavy text-white text-center text-sm font-semibold hover:bg-opacity-90 appearance-none cursor-pointer truncate"
                                     defaultValue=""
                                 >
                                     <option value="" disabled hidden>Mark selected as</option>
                                     <option value="PENDING">Pending</option>
                                     <option value="FOR REVIEW">For Review</option>
-                                    <option value="TERMINATED">Terminated</option>
-                                    <option value="VOID">Void</option>
+
+
                                     <option value="COMPLETED">Completed</option>
                                 </select>
                             </div>
+
+                            {/* DELETE BUTTON */}
+                            <button
+                                onClick={handleDeleteDockets}
+                                disabled={isUpdating}
+                                className="px-4 py-2 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition"
+                            >
+                                Delete selected
+                            </button>
                         </div>
                     </div>
 
@@ -299,6 +330,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 docketId={selectedDocketId}
                 users={users}
                 lookups={lookups}
+                currentUserRole={userData.role}
             />
         </div>
     );

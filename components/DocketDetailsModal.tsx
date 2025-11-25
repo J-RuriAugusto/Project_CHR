@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDocketDetails, checkDocketNumberExists } from '@/lib/actions/docket-queries';
+import { deleteDockets, updateDocket } from "@/lib/actions/docket-actions";
+import { DocketSubmissionData } from '@/lib/actions/docket-submission';
 
 interface DocketDetailsModalProps {
     isOpen: boolean;
@@ -11,6 +13,7 @@ interface DocketDetailsModalProps {
     docketId: string | null;
     users: any[];
     lookups: DocketLookups;
+    currentUserRole?: string;
 }
 
 const SECTORS = [
@@ -62,9 +65,10 @@ const SECTORS = [
     "Children in Street Situations"
 ];
 
-export default function DocketDetailsModal({ isOpen, onClose, docketId, users, lookups }: DocketDetailsModalProps) {
+export default function DocketDetailsModal({ isOpen, onClose, docketId, users, lookups, currentUserRole }: DocketDetailsModalProps) {
     const currentYear = new Date().getFullYear();
     const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const [originalDocketNumber, setOriginalDocketNumber] = useState('');
     const [docketNumber, setDocketNumber] = useState('');
@@ -75,6 +79,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
     const [selectedRights, setSelectedRights] = useState<number[]>([]);
     const [status, setStatus] = useState<string>('Pending');
+
+    const isEditable = status === 'Pending';
 
     // Updated state for Victims and Respondents - both support multiple sectors
     const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
@@ -295,15 +301,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const validateDateFormat = (dateString: string): boolean => {
         if (!dateString) return false;
 
-        // Allow mm/dd/yyyy format with 1 or 2 digits for month and day
-        const datePattern = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-        const match = dateString.match(datePattern);
+        const parts = dateString.split('/');
+        if (parts.length !== 3) return false;
 
-        if (!match) return false;
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
 
-        const month = parseInt(match[1]);
-        const day = parseInt(match[2]);
-        const year = parseInt(match[3]);
+        if (isNaN(month) || isNaN(day) || isNaN(year)) return false;
 
         // Validate month (1-12) and day (1-31)
         if (month < 1 || month > 12) return false;
@@ -317,6 +322,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     };
 
     const handleSaveChanges = async () => {
+
         const errors: string[] = [];
 
         // 1. Validate Docket Number
@@ -340,14 +346,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         if (!dateReceived.trim()) {
             errors.push('Date Received is required');
         } else if (!validateDateFormat(dateReceived)) {
-            errors.push('Date Received must be in mm/dd/yyyy format');
+            errors.push('Date Received must be in mm/dd/yyyy format and must be a valid date');
         }
 
         // 3. Validate Deadline
         if (!deadline.trim()) {
             errors.push('Deadline is required');
         } else if (!validateDateFormat(deadline)) {
-            errors.push('Deadline must be in mm/dd/yyyy format');
+            errors.push('Deadline must be in mm/dd/yyyy format and must be a valid date');
         }
 
         // 4. Validate Rights Violated
@@ -385,11 +391,60 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         }
 
         // Show results
+        // Show results
         if (errors.length > 0) {
             alert('Please fix the following errors:\n\n' + errors.map((err, i) => `${i + 1}. ${err}`).join('\n'));
         } else {
-            alert('All validations passed! Ready to save changes.');
-            // TODO: Implement actual save logic here
+            if (!docketId) return;
+
+            setIsSaving(true);
+
+            const submissionData: DocketSubmissionData = {
+                docketNumber,
+                dateReceived,
+                deadline,
+                typeOfRequestId: Number(typeOfRequest),
+                categoryId: Number(category),
+                modeOfRequestId: Number(modeOfRequest),
+                selectedRightIds: selectedRights,
+                victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
+                respondents: respondents.map(r => ({ name: r.name, sectorNames: r.sectors })),
+                staffInChargeId: staff[0].userId
+            };
+
+            try {
+                const result = await updateDocket(docketId, submissionData, status.toUpperCase());
+
+                if (result.success) {
+                    alert('Docket updated successfully');
+                    onClose();
+                } else {
+                    alert('Failed to update docket: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                alert('An unexpected error occurred while saving changes.');
+            } finally {
+                setIsSaving(false);
+            }
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!docketId) return;
+
+        if (!confirm('Are you sure you want to delete this docket? This action cannot be undone.')) {
+            return;
+        }
+
+        setIsSaving(true);
+        const result = await deleteDockets([docketId]);
+        setIsSaving(false);
+
+        if (result.success) {
+            onClose();
+        } else {
+            alert('Failed to delete docket: ' + result.error);
         }
     };
 
@@ -487,13 +542,15 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         onToggle: () => void,
         onSearch: (value: string) => void,
         onToggleSector: (sector: string) => void,
-        dropdownRef: React.RefObject<HTMLDivElement>
+        dropdownRef: React.RefObject<HTMLDivElement>,
+        disabled: boolean = false
     ) => (
         <div className="relative" ref={isOpen ? dropdownRef : null}>
             <button
                 type="button"
                 onClick={onToggle}
-                className="w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                disabled={disabled}
+                className={`w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
@@ -565,7 +622,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                     onChange={(e) => setDocketNumber(e.target.value)}
                                     onFocus={handleDocketNumberFocus}
                                     onBlur={handleDocketNumberBlur}
-                                    className="bg-white text-midnightNavy border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    disabled={!isEditable}
+                                    className={`bg-white text-midnightNavy border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 />
                             </div>
                             <div className="flex items-center gap-4">
@@ -580,8 +638,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                     >
                                         <option value="Pending">Pending</option>
                                         <option value="For Review">For Review</option>
-                                        <option value="Terminated">Terminated</option>
-                                        <option value="Void">Void</option>
+
+
                                         <option value="Completed">Completed</option>
                                     </select>
                                 </div>
@@ -600,6 +658,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                             </div>
                         ) : (
                             <div className="p-6 bg-snow">
+                                {!isEditable && (
+                                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm font-medium">
+                                        Non-pending status cannot be edited. Please change the status to Pending to make changes.
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-3 gap-6 mb-6">
                                     <div className="space-y-4">
                                         <div className="relative">
@@ -612,14 +675,16 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                     placeholder="mm/dd/yyyy"
                                                     value={dateReceived}
                                                     onChange={(e) => setDateReceived(e.target.value)}
-                                                    className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    disabled={!isEditable}
+                                                    className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
                                                 <button
                                                     onClick={() => {
                                                         setShowCalendar(!showCalendar);
                                                         setShowDeadlineCalendar(false);
                                                     }}
-                                                    className="text-royal hover:text-ash"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Calendar size={20} />
                                                 </button>
@@ -637,7 +702,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                     placeholder="mm/dd/yyyy"
                                                     value={deadline}
                                                     onChange={(e) => setDeadline(e.target.value)}
-                                                    className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    disabled={!isEditable}
+                                                    className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
                                                 <button
                                                     type="button"
@@ -645,7 +711,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                         setShowDeadlineCalendar(!showDeadlineCalendar);
                                                         setShowCalendar(false);
                                                     }}
-                                                    className="text-royal hover:text-ash"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Calendar size={20} />
                                                 </button>
@@ -660,7 +727,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                 </label>
                                                 <button
                                                     onClick={addVictimField}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -674,7 +742,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                 placeholder="Name"
                                                                 value={victim.name}
                                                                 onChange={(e) => updateVictimName(index, e.target.value)}
-                                                                className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                disabled={!isEditable}
+                                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             />
 
                                                             {/* Multi-Select Dropdown for Victims */}
@@ -688,7 +757,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                 () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
                                                                 setVictimSectorSearch,
                                                                 (sector) => toggleVictimSector(index, sector),
-                                                                victimDropdownRef
+                                                                victimDropdownRef,
+                                                                !isEditable
                                                             )}
 
                                                             {/* Selected Sectors Display */}
@@ -703,7 +773,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => toggleVictimSector(index, sector)}
-                                                                                className="hover:text-blue-900"
+                                                                                disabled={!isEditable}
+                                                                                className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                             >
                                                                                 <XCircle size={14} className="text-blue-600" />
                                                                             </button>
@@ -715,7 +786,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                         {victims.length > 1 && (
                                                             <button
                                                                 onClick={() => removeVictim(index)}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                                disabled={!isEditable}
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -732,7 +804,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                 </label>
                                                 <button
                                                     onClick={addStaffField}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -744,7 +817,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                             <select
                                                                 value={member.userId}
                                                                 onChange={(e) => updateStaff(index, e.target.value)}
-                                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
+                                                                disabled={!isEditable}
+                                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <option value="">Assign the case to...</option>
                                                                 {users.map((user) => (
@@ -764,7 +838,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                         {staff.length > 1 && (
                                                             <button
                                                                 onClick={() => removeStaff(index)}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                                disabled={!isEditable}
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -783,7 +858,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <select
                                                 value={typeOfRequest}
                                                 onChange={(e) => setTypeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
+                                                disabled={!isEditable}
+                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="">Pick the type of Request...</option>
                                                 {lookups.requestTypes.map((type) => (
@@ -801,7 +877,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <select
                                                 value={modeOfRequest}
                                                 onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                disabled={!isEditable}
+                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="">Pick the mode...</option>
                                                 {lookups.requestModes.map((mode) => (
@@ -819,7 +896,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                 </label>
                                                 <button
                                                     onClick={addRespondentField}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -833,7 +911,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                 placeholder="Name"
                                                                 value={respondent.name}
                                                                 onChange={(e) => updateRespondentName(index, e.target.value)}
-                                                                className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                disabled={!isEditable}
+                                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             />
 
                                                             {/* Multi-Select Dropdown for Respondents */}
@@ -847,7 +926,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                 () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
                                                                 setRespondentSectorSearch,
                                                                 (sector) => toggleRespondentSector(index, sector),
-                                                                respondentDropdownRef
+                                                                respondentDropdownRef,
+                                                                !isEditable
                                                             )}
 
                                                             {/* Selected Sectors Display */}
@@ -862,7 +942,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => toggleRespondentSector(index, sector)}
-                                                                                className="hover:text-blue-900"
+                                                                                disabled={!isEditable}
+                                                                                className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                             >
                                                                                 <XCircle size={14} className="text-blue-600" />
                                                                             </button>
@@ -873,7 +954,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                         </div>
                                                         <button
                                                             onClick={() => removeRespondent(index)}
-                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                            disabled={!isEditable}
+                                                            className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         >
                                                             <X size={16} />
                                                         </button>
@@ -892,7 +974,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <select
                                                 value={category}
                                                 onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
-                                                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
+                                                disabled={!isEditable}
+                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="">Pick the category of alleged...</option>
                                                 {lookups.violationCategories.map((cat) => (
@@ -915,7 +998,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                 <button
                                                     type="button"
                                                     onClick={() => setOpenRightsDropdown(!openRightsDropdown)}
-                                                    className="w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                                                    disabled={!isEditable}
+                                                    className={`w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <span className="truncate">
                                                         {selectedRights.length > 0
@@ -983,7 +1067,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => toggleRight(rightId)}
-                                                                    className="hover:text-blue-900"
+                                                                    disabled={!isEditable}
+                                                                    className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                 >
                                                                     <XCircle size={14} className="text-blue-600" />
                                                                 </button>
@@ -996,13 +1081,26 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                     </div>
 
                                 </div>
-                                <div className="flex justify-end gap-4 mt-6">
-                                    <button
-                                        onClick={handleSaveChanges}
-                                        className="bg-soft text-coal px-6 py-2 rounded-lg hover:bg-gray-300 font-medium"
-                                    >
-                                        Save Changes
-                                    </button>
+                                <div className="flex justify-between items-center mt-6">
+                                    <div>
+                                        {currentUserRole === 'records_officer' && (
+                                            <button
+                                                onClick={handleDelete}
+                                                disabled={!isEditable}
+                                                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                            >
+                                                Delete Docket
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={handleSaveChanges}
+                                            className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                        >
+                                            Save Changes
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
