@@ -2,17 +2,10 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { signOut } from '../../../components/actions';
 import { sign } from 'crypto';
 
 export default async function RecordsOfficerDashboard() {
-  const signOut = async () => {
-    'use server';
-
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    return redirect('/');
-  };
-
   const supabase = createClient();
 
   const {

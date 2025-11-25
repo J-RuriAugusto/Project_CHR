@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import DocketContent from './DocketContent';
-import { signOut } from '../actions';
+import { signOut } from '../../../../components/actions';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
 
 export default async function Docket() {

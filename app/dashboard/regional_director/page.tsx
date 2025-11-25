@@ -1,10 +1,13 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import DashboardHeader from '@/components/DashboardHeader';
+import Sidebar from '@/components/Sidebar';
+import { signOut } from '../../../components/actions';
 
 export default async function RegionalDirectorDashboard() {
   const supabase = createClient();
-  
+  const currentPath = headers().get("next-url") || "/";
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -26,35 +29,33 @@ export default async function RegionalDirectorDashboard() {
   }
 
   return (
-    <div>
-      <DashboardHeader 
-        firstName={userData.first_name} 
-        lastName={userData.last_name} 
-        role={userData.role} 
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Regional Director Dashboard</h2>
-          <p className="text-gray-600">
-            Welcome to your dashboard. Here you can oversee regional operations and performance metrics.
-          </p>
-          
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-800">Regional Cases</h3>
-              <p className="text-blue-600 text-2xl font-bold">156</p>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-medium text-purple-800">Staff Performance</h3>
-              <p className="text-purple-600 text-2xl font-bold">92%</p>
-            </div>
-            <div className="bg-pink-50 p-4 rounded-lg">
-              <h3 className="font-medium text-pink-800">Budget Utilization</h3>
-              <p className="text-pink-600 text-2xl font-bold">78%</p>
-            </div>
-          </div>
+    <div className="h-screen flex bg-gray-50">
+      {/* LEFT COLUMN */}
+      <aside className="w-60 bg-midnightNavy border-r shadow-sm flex flex-col justify-between p-4">
+        <div className="flex justify-center mb-4">
+          <img
+            src="/cmms-logo2.png"
+            alt="Logo"
+            className="w-auto h-auto"
+          />
         </div>
+
+        {/* Navigation Links */}
+        <Sidebar currentPath={currentPath} />
+
+        {/* Logout button at bottom */}
+        <form action={signOut} className="pt-4 border-t">
+          <button
+            type="submit"
+            className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
+          >
+            <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </form>
+      </aside>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DashboardHeader userData={userData} />
       </main>
     </div>
   );

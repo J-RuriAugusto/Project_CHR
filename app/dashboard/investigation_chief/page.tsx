@@ -5,20 +5,11 @@ import Link from 'next/link';
 import DashboardHeader from '@/components/DashboardHeader';
 import { headers } from "next/headers";
 import Sidebar from '@/components/Sidebar';
-import { sign } from 'crypto';
+import { signOut } from '../../../components/actions';
 
 export default async function InvestigationChiefDashboard() {
-  const signOut = async () => {
-    'use server';
-
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    return redirect('/');
-  };
-
   const supabase = createClient();
   const currentPath = headers().get("next-url") || "/";
-  
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -27,7 +18,7 @@ export default async function InvestigationChiefDashboard() {
     return redirect('/');
   }
 
-  // Fetch user data
+  // Fetch user data from the users table
   const { data: userData, error } = await supabase
     .from('users')
     .select('first_name, last_name, role')

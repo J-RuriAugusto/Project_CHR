@@ -1,11 +1,10 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import AdminContent from '@/components/admin/AdminContent';
-import { signOut } from '../investigation_chief/actions';
+import { signOut } from '../../../components/actions';
 
 export default async function AdminDashboard() {
   const supabase = createClient();
-  
   const {
     data: { session },
   } = await supabase.auth.getSession();
