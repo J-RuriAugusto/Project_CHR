@@ -110,23 +110,23 @@ export const Hero = async ({
       </div>
 
       {/* Right side - Login Section */}
-      <div className="flex flex-1 bg-white lg:px-12 h-screen">
-        <div className="m-auto w-full max-w-sm lg:max-w-md flex flex-col items-center">
+      <div className="flex flex-1 bg-white lg:px-12 h-screen items-center justify-center">
+        <div className="w-full max-w-sm lg:max-w-md flex flex-col items-center">
           {/* Logo + Header */}
-          <div className="flex flex-col items-center mb-3">
-            <div className="relative w-36 h-28 lg:w-44 lg:h-36 -mb-2">
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative w-48 h-40 lg:w-56 lg:h-48 -mt-2">
               <Image
                 src="/cmms-logo.png"
                 alt="CMMS Logo"
                 fill
-                className="object-contain"
+                className="object-contain object-top"
                 priority
               />
             </div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 mt-0 text-center">
+            <h1 className="text-xl lg:text-2xl font-bold text-midnightNavy text-center -mt-20">
               Login to Your Account
             </h1>
-            <p className="text-center text-gray-600 mt-1 text-sm lg:text-base leading-relaxed">
+            <p className="text-center text-midnightNavy mt-2 text-sm lg:text-base leading-relaxed">
               Manage and monitor CHR case records with role-based access
               to ensure confidentiality and security.
             </p>

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default async function OfficerDashboard() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const {
     data: { session },
@@ -27,11 +27,7 @@ export default async function OfficerDashboard() {
 
   return (
     <div>
-      <DashboardHeader 
-        firstName={userData.first_name} 
-        lastName={userData.last_name} 
-        role={userData.role} 
-      />
+      <DashboardHeader userData={userData} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white shadow rounded-lg p-6">
