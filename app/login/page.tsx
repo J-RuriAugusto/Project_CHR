@@ -21,7 +21,7 @@ export default async function Login({
       .select('role')
       .eq('email', session.user.email)
       .single();
-    
+
     if (!error && userData && userData.role) {
       const validRoles = [
         'investigation_chief',
@@ -31,7 +31,7 @@ export default async function Login({
         'legal_chief',
         'admin'
       ];
-      
+
       if (validRoles.includes(userData.role)) {
         return redirect(`/dashboard/${userData.role}`);
       } else {
@@ -39,7 +39,7 @@ export default async function Login({
         return redirect('/login?message=Your account does not have the required permissions');
       }
     }
-    
+
     return redirect('/');
   }
 
@@ -59,13 +59,19 @@ export default async function Login({
       return redirect('/login?message=Could not authenticate user');
     }
 
-    // After successful login, fetch user role and redirect accordingly
+    // After successful login, fetch user role and status
     const { data: userData, error: roleError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, status')
       .eq('email', email)
       .single();
-    
+
+    // Check if account is inactive
+    if (!roleError && userData && userData.status === 'INACTIVE') {
+      await supabase.auth.signOut();
+      return redirect('/login?message=Your account is inactive. Please contact an administrator.');
+    }
+
     if (!roleError && userData && userData.role) {
       const validRoles = [
         'investigation_chief',
@@ -75,7 +81,7 @@ export default async function Login({
         'legal_chief',
         'admin'
       ];
-      
+
       if (validRoles.includes(userData.role)) {
         return redirect(`/dashboard/${userData.role}`);
       } else {

@@ -9,6 +9,7 @@ interface User {
   first_name: string;
   last_name: string;
   role: string;
+  status: string;
 }
 
 interface UserManagementProps {
@@ -20,7 +21,6 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [selectedRole, setSelectedRole] = useState('all');
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -28,23 +28,22 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
     email: '',
     first_name: '',
     last_name: '',
-    role: 'officer'
+    role: 'officer',
+    status: 'ACTIVE'
   });
 
   const roles = [
-    'admin', 'investigation_chief', 'regional_director', 
+    'admin', 'investigation_chief', 'regional_director',
     'officer', 'records_officer', 'legal_chief'
   ];
 
-  const filteredUsers = selectedRole === 'all' 
-    ? users 
+  const filteredUsers = selectedRole === 'all'
+    ? users
     : users.filter(user => user.role === selectedRole);
 
-  const handleEditClick = (user: User) => setEditingUser({...user});
-  const handleDeleteClick = (user: User) => setUserToDelete(user);
+  const handleEditClick = (user: User) => setEditingUser({ ...user });
   const handleCancelEdit = () => setEditingUser(null);
-  const handleCancelDelete = () => setUserToDelete(null);
-  
+
   const handleAddClick = () => setShowAddForm(true);
   const handleCancelAdd = () => {
     setShowAddForm(false);
@@ -52,24 +51,25 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
       email: '',
       first_name: '',
       last_name: '',
-      role: 'officer'
+      role: 'officer',
+      status: 'ACTIVE'
     });
   };
 
   const handleEditChange = (field: keyof User, value: string) => {
     if (editingUser) {
-      setEditingUser({...editingUser, [field]: value});
+      setEditingUser({ ...editingUser, [field]: value });
     }
   };
-  
+
   const handleNewUserChange = (field: keyof Omit<User, 'id'>, value: string) => {
-    setNewUser({...newUser, [field]: value});
+    setNewUser({ ...newUser, [field]: value });
   };
 
   const handleSaveEdit = async () => {
     if (!editingUser) return;
     setIsLoading(true);
-    
+
     try {
       // Call API to update user in both auth and users table
       const response = await fetch('/api/admin/update-user', {
@@ -82,16 +82,17 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
           email: editingUser.email,
           first_name: editingUser.first_name,
           last_name: editingUser.last_name,
-          role: editingUser.role
+          role: editingUser.role,
+          status: editingUser.status
         }),
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update user');
       }
-      
+
       // Update local state with the returned user data
       setUsers(users.map(user => user.id === editingUser.id ? result.user : user));
       setMessage({ text: 'User updated successfully', type: 'success' });
@@ -102,25 +103,25 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
       setIsLoading(false);
     }
   };
-  
+
   const handleAddUser = async () => {
     setIsLoading(true);
-    
+
     try {
       // Check if email already exists
       const { data: existingUsers, error: checkError } = await supabase
         .from('users')
         .select('email')
         .eq('email', newUser.email);
-      
+
       if (checkError) throw checkError;
-      
+
       if (existingUsers && existingUsers.length > 0) {
         setMessage({ text: 'Email address is already in use', type: 'error' });
         setIsLoading(false);
         return;
       }
-      
+
       // Call the server-side API to create the user
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -129,58 +130,26 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
         },
         body: JSON.stringify({
           email: newUser.email,
-          password: 'p@ssw0rD', // Make sure this is included
+          password: 'p@ssw0rD',
           first_name: newUser.first_name,
           last_name: newUser.last_name,
-          role: newUser.role
+          role: newUser.role,
+          status: newUser.status
         }),
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create user');
       }
-      
+
       // Update local state with the returned user data
       setUsers([...users, result.user]);
       setMessage({ text: 'User created successfully', type: 'success' });
       handleCancelAdd();
     } catch (error: any) {
       setMessage({ text: error.message || 'Failed to create user', type: 'error' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!userToDelete) return;
-    setIsLoading(true);
-    
-    try {
-      // Call API to delete user from both auth and users table
-      const response = await fetch('/api/admin/delete-user', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userToDelete.id
-        }),
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to delete user');
-      }
-      
-      // Update local state
-      setUsers(users.filter(user => user.id !== userToDelete.id));
-      setMessage({ text: 'User deleted successfully', type: 'success' });
-      setUserToDelete(null);
-    } catch (error: any) {
-      setMessage({ text: error.message || 'Failed to delete user', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -198,6 +167,12 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
     return classes[role] || 'bg-gray-100 text-gray-800';
   };
 
+  const getStatusBadgeClasses = (status: string) => {
+    return status === 'ACTIVE'
+      ? 'bg-green-100 text-green-800'
+      : 'bg-red-100 text-red-800';
+  };
+
   return (
     <div>
       {message.text && (
@@ -206,7 +181,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
           {message.text}
         </div>
       )}
-      
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">User Management</h3>
         <div className="flex items-center space-x-4">
@@ -237,7 +212,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
           </div>
         </div>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-200">
           <thead className="bg-gray-50">
@@ -246,6 +221,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -289,6 +265,16 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
                         ))}
                       </select>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={editingUser.status}
+                        onChange={(e) => handleEditChange('status', e.target.value)}
+                        className="border rounded p-1 w-full"
+                      >
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                      </select>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
                         onClick={handleSaveEdit}
@@ -315,6 +301,11 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
                         {user.role}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClasses(user.status)}`}>
+                        {user.status}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <button
                         onClick={() => handleEditClick(user)}
@@ -325,15 +316,6 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
-                      <button
-                        onClick={() => handleDeleteClick(user)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Delete user"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </td>
                   </>
                 )}
@@ -341,7 +323,7 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
                   No users found
                 </td>
               </tr>
@@ -349,34 +331,6 @@ export default function UserManagement({ users: initialUsers }: UserManagementPr
           </tbody>
         </table>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {userToDelete && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Delete</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Are you sure you want to delete user <span className="font-medium">{userToDelete.email}</span>? 
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleCancelDelete}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                {isLoading ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add User Modal */}
       {showAddForm && (

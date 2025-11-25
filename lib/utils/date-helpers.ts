@@ -6,7 +6,7 @@
  * Validates if a date string is in mm/dd/yyyy format
  */
 export function isValidDateFormat(dateString: string): boolean {
-    const regex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+    const regex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/;
     return regex.test(dateString);
 }
 
@@ -49,10 +49,10 @@ export function computeStatus(deadline: Date): 'Overdue' | 'Urgent' | 'Due' | 'A
 
     if (daysUntilDeadline < 0) {
         return 'Overdue';
-    } else if (daysUntilDeadline <= 7) {
-        return 'Urgent';
-    } else if (daysUntilDeadline <= 14) {
+    } else if (daysUntilDeadline === 0) {
         return 'Due';
+    } else if (daysUntilDeadline <= 5) {
+        return 'Urgent';
     } else {
         return 'Active';
     }

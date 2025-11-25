@@ -7,7 +7,7 @@ export interface DocketListItem {
     id: string;
     docketNumber: string;
     typeOfRequest: string;
-    status: 'Overdue' | 'Urgent' | 'Due' | 'Active';
+    status: string;
     assignedTo: string;
     daysTillDeadline: number;
     lastUpdated: string;
@@ -27,6 +27,7 @@ export async function getDockets(): Promise<DocketListItem[]> {
             docket_number,
             deadline,
             updated_at,
+            status,
             type_of_request_id,
             staff_in_charge_id,
             request_types!type_of_request_id (name),
@@ -46,7 +47,18 @@ export async function getDockets(): Promise<DocketListItem[]> {
 
     return data.map((docket: any) => {
         const deadlineDate = new Date(docket.deadline);
-        const status = computeStatus(deadlineDate);
+        let status = docket.status;
+
+        // If status is PENDING (or null/undefined which we treat as pending for safety), compute it
+        if (!status || status === 'PENDING') {
+            status = computeStatus(deadlineDate);
+        } else if (status === 'FOR REVIEW') {
+            status = 'For Review';
+        } else {
+            // Convert COMPLETED, TERMINATED, VOID to Title Case for display
+            status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+        }
+
         const daysTillDeadline = getDaysDifference(today, deadlineDate);
 
         return {
@@ -81,4 +93,88 @@ export async function checkDocketNumberExists(docketNumber: string): Promise<boo
     }
 
     return !!data;
+}
+
+/**
+ * Fetch full docket details by ID
+ */
+export async function getDocketDetails(id: string) {
+    const supabase = createClient();
+
+    // 1. Fetch main docket details
+    const { data: docket, error: docketError } = await supabase
+        .from('dockets')
+        .select(`
+            *,
+            request_types!type_of_request_id (id, name),
+            users!staff_in_charge_id (id, email, first_name, last_name)
+        `)
+        .eq('id', id)
+        .single();
+
+    if (docketError || !docket) {
+        console.error('Error fetching docket details:', docketError);
+        return null;
+    }
+
+    // 2. Fetch rights
+    const { data: rights, error: rightsError } = await supabase
+        .from('docket_rights')
+        .select('right_id')
+        .eq('docket_id', id);
+
+    if (rightsError) {
+        console.error('Error fetching rights:', rightsError);
+        return null;
+    }
+
+    // 3. Fetch parties (victims and respondents) with their sectors
+    const { data: parties, error: partiesError } = await supabase
+        .from('docket_parties')
+        .select(`
+            id,
+            name,
+            party_type,
+            docket_party_sectors (
+                sectors (name)
+            )
+        `)
+        .eq('docket_id', id);
+
+    if (partiesError) {
+        console.error('Error fetching parties:', partiesError);
+        return null;
+    }
+
+    // Process parties into victims and respondents
+    const victims = parties
+        .filter((p: any) => p.party_type === 'VICTIM')
+        .map((p: any) => ({
+            name: p.name,
+            sectors: p.docket_party_sectors.map((s: any) => s.sectors.name)
+        }));
+
+    const respondents = parties
+        .filter((p: any) => p.party_type === 'RESPONDENT')
+        .map((p: any) => ({
+            name: p.name,
+            sectors: p.docket_party_sectors.map((s: any) => s.sectors.name)
+        }));
+
+    return {
+        docketNumber: docket.docket_number,
+        dateReceived: new Date(docket.date_received).toLocaleDateString('en-US'),
+        deadline: new Date(docket.deadline).toLocaleDateString('en-US'),
+        typeOfRequestId: docket.type_of_request_id,
+        categoryId: docket.category_id,
+        modeOfRequestId: docket.mode_of_request_id,
+        selectedRights: rights.map((r: any) => r.right_id),
+        victims,
+        respondents,
+        staff: [{
+            userId: docket.users?.id || '',
+            email: docket.users?.email || ''
+        }],
+        status: docket.status || 'PENDING'
+    };
 }

@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import DocketTable from './DocketTable';
 import DocketCaseModal from "@/components/DocketCaseModal";
+import DocketDetailsModal from "@/components/DocketDetailsModal";
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
+import { updateDocketStatus } from '@/lib/actions/docket-actions';
 
 interface DocketContentProps {
     userData: {
@@ -20,10 +22,14 @@ interface DocketContentProps {
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterType, setFilterType] = useState('all');
+    const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     // Fetch dockets on component mount
     useEffect(() => {
@@ -40,6 +46,45 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const handleModalClose = () => {
         setIsModalOpen(false);
         // Refresh dockets after closing modal (in case a new one was added)
+        fetchDockets();
+    };
+
+    const handleSelectionChange = (docketId: string) => {
+        setSelectedDockets(prev =>
+            prev.includes(docketId)
+                ? prev.filter(id => id !== docketId)
+                : [...prev, docketId]
+        );
+    };
+
+    const handleSelectAll = (ids: string[]) => {
+        setSelectedDockets(ids);
+    };
+
+    const handleStatusUpdate = async (status: string) => {
+        if (selectedDockets.length === 0) return;
+
+        setIsUpdating(true);
+        const result = await updateDocketStatus(selectedDockets, status);
+        setIsUpdating(false);
+
+        if (result.success) {
+            setSelectedDockets([]); // Clear selection
+            fetchDockets(); // Refresh data
+        } else {
+            alert('Failed to update status');
+        }
+    };
+
+    const handleRowClick = (docketId: string) => {
+        setSelectedDocketId(docketId);
+        setIsDetailsModalOpen(true);
+    };
+
+    const handleDetailsModalClose = () => {
+        setIsDetailsModalOpen(false);
+        setSelectedDocketId(null);
+        // Optional: refresh dockets if changes were made
         fetchDockets();
     };
 
@@ -152,8 +197,10 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     <option value="Urgent">Urgent</option>
                                     <option value="Due">Due</option>
                                     <option value="Active">Active</option>
-                                    <option value="Pending">Pending</option>
                                     <option value="Completed">Completed</option>
+                                    <option value="For Review">For Review</option>
+                                    <option value="Void">Void</option>
+                                    <option value="Terminated">Terminated</option>
                                     <option value="all">All</option>
                                 </select>
 
@@ -192,6 +239,33 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                 </svg>
                                 Docket New Case
                             </button>
+
+                            {/* MARK AS DROPDOWN */}
+                            <div className="relative w-40">
+                                <select
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            if (selectedDockets.length === 0) {
+                                                alert("Please select at least one docket to update.");
+                                                e.target.value = ""; // Reset select
+                                                return;
+                                            }
+                                            handleStatusUpdate(e.target.value);
+                                            e.target.value = ""; // Reset select
+                                        }
+                                    }}
+                                    disabled={isUpdating}
+                                    className="w-full px-2 py-2 rounded-md bg-gray text-white text-center text-sm font-semibold hover:bg-opacity-90 appearance-none cursor-pointer truncate"
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled hidden>Mark selected as</option>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="FOR REVIEW">For Review</option>
+                                    <option value="TERMINATED">Terminated</option>
+                                    <option value="VOID">Void</option>
+                                    <option value="COMPLETED">Completed</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -202,17 +276,30 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                 <p>Loading dockets...</p>
                             </div>
                         ) : (
-                            <DocketTable dockets={dockets.filter(docket => {
-                                const statusMatch = filterStatus === 'all' || docket.status === filterStatus;
-                                const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
-                                return statusMatch && typeMatch;
-                            })} />
+                            <DocketTable
+                                dockets={dockets.filter(docket => {
+                                    const statusMatch = filterStatus === 'all' || docket.status === filterStatus;
+                                    const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
+                                    return statusMatch && typeMatch;
+                                })}
+                                selectedDockets={selectedDockets}
+                                onSelectionChange={handleSelectionChange}
+                                onSelectAll={handleSelectAll}
+                                onRowClick={handleRowClick}
+                            />
                         )}
                     </div>
                 </div>
             </main>
 
             <DocketCaseModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
+            <DocketDetailsModal
+                isOpen={isDetailsModalOpen}
+                onClose={handleDetailsModalClose}
+                docketId={selectedDocketId}
+                users={users}
+                lookups={lookups}
+            />
         </div>
     );
 }

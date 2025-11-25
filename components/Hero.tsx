@@ -57,6 +57,18 @@ export const Hero = async ({
       return redirect('/?message=Could not authenticate user');
     }
 
+    // Check user status
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('status')
+      .eq('email', email)
+      .single();
+
+    if (!userError && userData && userData.status === 'INACTIVE') {
+      await supabase.auth.signOut();
+      return redirect('/?message=Your account is inactive. Please contact an administrator.');
+    }
+
     return redirect('/');
   };
 

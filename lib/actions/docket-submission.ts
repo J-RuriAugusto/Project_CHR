@@ -100,7 +100,8 @@ export async function submitDocket(
                 category_id: data.categoryId,
                 mode_of_request_id: data.modeOfRequestId,
                 created_by_user_id: publicUserId, // Use the ID from public.users
-                staff_in_charge_id: data.staffInChargeId
+                staff_in_charge_id: data.staffInChargeId,
+                status: 'PENDING'
             })
             .select('id')
             .single();

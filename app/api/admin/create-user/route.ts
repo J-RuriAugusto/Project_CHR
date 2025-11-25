@@ -51,6 +51,7 @@ export async function POST(request: Request) {
         first_name: first_name,
         last_name: last_name,
         role: role,
+        status: 'ACTIVE',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
