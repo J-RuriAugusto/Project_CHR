@@ -2,6 +2,9 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import DashboardHeader from '@/components/DashboardHeader';
+import { headers } from "next/headers";
+import Sidebar from '@/components/Sidebar';
 import { sign } from 'crypto';
 
 export default async function InvestigationChiefDashboard() {
@@ -14,6 +17,7 @@ export default async function InvestigationChiefDashboard() {
   };
 
   const supabase = createClient();
+  const currentPath = headers().get("next-url") || "/";
   
   const {
     data: { session },
@@ -48,28 +52,7 @@ export default async function InvestigationChiefDashboard() {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 mt-2">
-          <ul className="space-y-4">
-            <li>
-              <Link
-                href="/dashboard/investigation_chief"
-                className="flex justify-center space-x-3 text-base text-paleSky font-semibold hover:text-white transition"
-              >
-                <img src="/icon5.png" alt="Dashboard" className="w-5 h-5" />
-                <span>Dashboard</span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dashboard/investigation_chief/docket"
-                className="flex justify-center space-x-3 text-base text-paleSky font-semibold hover:text-white transition"
-              >
-                <img src="/icon7.png" alt="Docker" className="w-5 h-5" />
-                <span>Docker</span>
-              </Link>
-            </li>
-          </ul>
-        </div>
+        <Sidebar currentPath={currentPath} />
 
         {/* Logout button at bottom */}
         <form action={signOut} className="pt-4 border-t">
@@ -85,44 +68,7 @@ export default async function InvestigationChiefDashboard() {
 
       {/* MIDDLE COLUMN */}
       <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar"> 
-        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-midnightNavy">
-              Welcome, Chief {userData.first_name} {userData.last_name}!
-            </h1>
-            <p className="text-base font-normal text-midnightNavy mt-1">
-              Monitor ongoing investigations and ensure timely case resolution.
-            </p>
-          </div>
-          {/* USER INFO */}
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-snowWhite transition">
-              <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
-            </button>
-
-            <button className="relative p-2">
-              <img src="/icon10.png" alt="Notifications" className="w-6 h-6" />
-              <span className="absolute top-1 right-1 bg-crimsonRose text-white text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
-              3
-              </span>
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-              <p className="font-bold text-midnightNavy">
-                  {userData.first_name} {userData.last_name}
-              </p>
-              <p className="text-sm text-midnightNavy">{userData.role}</p>
-              </div>
-
-              <img
-              src="/icon11.png"
-              alt="User Avatar"
-              className="w-12 h-12 rounded-full border border-gray-200"
-              />
-            </div>
-          </div>
-        </div>
+        <DashboardHeader userData={userData} />
         
         <div className="px-6 mt-6 space-y-6">
           {/* Dashboard main content */}
@@ -211,9 +157,9 @@ export default async function InvestigationChiefDashboard() {
                   <h2 className="text-base text-midnightNavy font-semibold">
                     Urgent Cases
                   </h2>
-                  <a href="#" className="text-sm text-slateGray font-semibold">
+                  <Link href="/dashboard/investigation_chief/docket" className="text-sm text-slateGray font-semibold">
                     View All
-                  </a>
+                  </Link>
                 </div>
 
                 {/* This Week */}

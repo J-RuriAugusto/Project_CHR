@@ -1,10 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DashboardHeader from '@/components/DashboardHeader';
-import dynamic from 'next/dynamic';
-
-// Import the client component with dynamic to avoid SSR
-const UserManagement = dynamic(() => import('@/components/admin/UserManagement'), { ssr: false });
+import AdminContent from '@/components/admin/AdminContent';
 
 export default async function AdminDashboard() {
   const supabase = createClient();
@@ -38,24 +34,19 @@ export default async function AdminDashboard() {
     console.error('Error fetching users:', usersError);
   }
 
+  // Server action for sign out
+  const signOut = async () => {
+    'use server';
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    redirect('/');
+  };
+
   return (
-    <div>
-      <DashboardHeader 
-        firstName={userData.first_name} 
-        lastName={userData.last_name} 
-        role={userData.role} 
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Admin Dashboard</h2>
-          <p className="text-gray-600 mb-6">
-            Welcome to your dashboard. Here you can manage system settings and user accounts.
-          </p>
-          
-          <UserManagement users={allUsers || []} />
-        </div>
-      </main>
-    </div>
+    <AdminContent 
+      userData={userData}
+      signOut={signOut}
+      users={allUsers || []}
+    />
   );
 }
