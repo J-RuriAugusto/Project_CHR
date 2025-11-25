@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import AdminContent from '@/components/admin/AdminContent';
+import { signOut } from '../investigation_chief/actions';
 
 export default async function AdminDashboard() {
   const supabase = createClient();
@@ -33,14 +34,6 @@ export default async function AdminDashboard() {
   if (usersError) {
     console.error('Error fetching users:', usersError);
   }
-
-  // Server action for sign out
-  const signOut = async () => {
-    'use server';
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    redirect('/');
-  };
 
   return (
     <AdminContent 
