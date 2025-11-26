@@ -5,8 +5,7 @@ import { signOut } from '../../../../components/actions';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
 
 export default async function Docket() {
-    const supabase = await createClient(); //Added await
-    
+    const supabase = await createClient();
     const {
         data: { session },
     } = await supabase.auth.getSession();

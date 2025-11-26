@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import DashboardHeader from '@/components/DashboardHeader';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { headers } from "next/headers";
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';

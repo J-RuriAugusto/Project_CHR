@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import DashboardHeader from '@/components/DashboardHeader';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
 

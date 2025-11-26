@@ -21,8 +21,6 @@ function StatusBadge({ status }: { status: string }) {
         'Completed': 'bg-brightGreen text-white',
         'Pending': 'bg-white text-golden border border-golden',
         'For Review': 'bg-transparent text-golden border border-golden',
-
-
     };
 
     const style = statusStyles[status as keyof typeof statusStyles] || 'bg-gray-200 text-gray-800';
@@ -50,8 +48,8 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
     const isIndeterminate = selectedDockets.length > 0 && !allSelected;
 
     return (
-        <table className="w-full">
-            <thead className="border-b-2 border-t-2 border-graphiteGray">
+        <table className="w-full bg-snowWhite">
+            <thead className="bg-white border-b border-t border-ash">
                 <tr>
                     <th className="w-12 px-4 py-2">
                         <input
@@ -90,7 +88,7 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
                     </th>
                 </tr>
             </thead>
-            <tbody className="divide-y-2 divide-graphiteGray border-b-2 border-graphiteGray">
+            <tbody className="divide-y divide-graphiteGray border-b border-ash">
                 {dockets.map((docket) => (
                     <tr
                         key={docket.id}

@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DashboardHeader from '@/components/DashboardHeader';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
 
 export default async function LegalChiefDashboard() {
   const supabase = await createClient(); //Added await

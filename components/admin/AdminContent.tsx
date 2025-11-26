@@ -197,7 +197,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal hover:bg-gray-50 appearance-none pr-8 cursor-pointer truncate border border-gray-300"
+                  className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal appearance-none pr-8 cursor-pointer truncate"
                 >
                   <option value="all">All Status</option>
                   <option value="ACTIVE">Active</option>
@@ -212,7 +212,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                 <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal hover:bg-gray-50 appearance-none pr-8 cursor-pointer truncate border border-gray-300"
+                  className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal appearance-none pr-8 cursor-pointer truncate"
                 >
                   <option value="all">All Roles</option>
                   <option value="admin">Admin</option>
@@ -238,8 +238,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
             </div>
           </div>
 
-          {/* Table with padding */}
-          <div className="bg-white shadow-sm overflow-hidden mx-6">
+          {/* Table */}
+          <div className="bg-snowWhite shadow-sm overflow-hidden mx-6">
             <UserManagementTable
               users={searchFilteredUsers}
               filterRole={filterRole}
