@@ -39,7 +39,7 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
     // Show message if no dockets
     if (dockets.length === 0) {
         return (
-            <div className="w-full p-8 text-center text-gray-500">
+            <div className="w-full p-8 text-center text-midnightNavy">
                 <p className="text-lg">No dockets found</p>
                 <p className="text-sm mt-2">Click "Docket New Case" to create your first docket</p>
             </div>
@@ -50,8 +50,8 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
     const isIndeterminate = selectedDockets.length > 0 && !allSelected;
 
     return (
-        <table className="w-full">
-            <thead className="border-b-2 border-t-2 border-graphiteGray">
+        <table className="w-full bg-snowWhite">
+            <thead className="bg-white border-b border-t border-ash">
                 <tr>
                     <th className="w-12 px-4 py-2">
                         <input
@@ -90,7 +90,7 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
                     </th>
                 </tr>
             </thead>
-            <tbody className="divide-y-2 divide-graphiteGray border-b-2 border-graphiteGray">
+            <tbody className="divide-y divide-graphiteGray border-b border-ash">
                 {dockets.map((docket) => (
                     <tr
                         key={docket.id}

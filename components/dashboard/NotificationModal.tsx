@@ -112,7 +112,8 @@ export default function NotificationModal({ isOpen, onClose }: NotificationModal
                 {newNotifications.map((notification) => (
                     <div
                     key={notification.id}
-                    className="px-6 py-4 bg-blue-50 hover:bg-blue-100 cursor-pointer transition flex items-center gap-4"
+                    className="mx-5 mb-2 px-4 py-3.5 rounded-md cursor-pointer transition flex items-center gap-3.5"
+                    style={{ backgroundColor: '#EAF1FF' }}
                     >
                     <img src={getIconPath(notification.type)} alt="" className="w-12 h-12" />
                     <div className="flex-1 min-w-0">
@@ -141,8 +142,7 @@ export default function NotificationModal({ isOpen, onClose }: NotificationModal
                 {earlierNotifications.map((notification) => (
                     <div
                     key={notification.id}
-                    className="px-6 py-4 hover:bg-gray-50 cursor-pointer transition flex items-center gap-4"
-                    >
+                    className="mx-5 mb-2 px-4 py-3.5 rounded-md hover:bg-gray-50 cursor-pointer transition flex items-center gap-3.5">
                     <img src={getIconPath(notification.type)} alt="" className="w-12 h-12" />
                     <div className="flex-1 min-w-0">
                         <p className="leading-snug" style={{ color: '#636B78' }}>

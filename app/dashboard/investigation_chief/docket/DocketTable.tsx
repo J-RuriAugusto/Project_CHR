@@ -37,7 +37,7 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
     // Show message if no dockets
     if (dockets.length === 0) {
         return (
-            <div className="w-full p-8 text-center text-gray-500">
+            <div className="w-full p-8 text-center text-midnightNavy">
                 <p className="text-lg">No dockets found</p>
                 <p className="text-sm mt-2">Click "Docket New Case" to create your first docket</p>
             </div>

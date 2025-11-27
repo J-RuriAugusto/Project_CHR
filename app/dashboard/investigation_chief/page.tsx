@@ -43,7 +43,7 @@ export default async function InvestigationChiefDashboard() {
         </div>
 
         {/* Navigation Links */}
-        <Sidebar currentPath={currentPath} />
+        <Sidebar currentPath={currentPath} role={userData.role} />
 
         {/* Logout button at bottom */}
         <form action={signOut} className="pt-4 border-t">

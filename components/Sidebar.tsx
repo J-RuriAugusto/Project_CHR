@@ -4,9 +4,10 @@ import Link from "next/link";
 
 interface SidebarProps {
     currentPath: string | null;
+    role?: string; // Optional with ?
 }
 
-export default function Sidebar({ currentPath, role = 'investigation_chief' }: { currentPath: string | null, role?: string }) {
+export default function Sidebar({ currentPath, role = 'investigation_chief' }: SidebarProps) {
     const basePath = `/dashboard/${role}`;
 
     return (
@@ -18,7 +19,7 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: {
                     <Link
                         href={basePath}
                         className={`flex justify-start space-x-3 text-base font-semibold transition pl-10
-                ${currentPath === basePath
+                ${currentPath === basePath || currentPath === `${basePath}/`
                                 ? "text-white bg-blue-600 rounded-md py-2"
                                 : "text-paleSky hover:text-white"
                             }`}
@@ -27,7 +28,6 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: {
                         <span>Dashboard</span>
                     </Link>
                 </li>
-
                 {/* Docket */}
                 <li>
                     <Link

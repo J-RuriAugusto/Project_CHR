@@ -10,7 +10,7 @@ import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DocketHeader from '@/components/dashboard/DocketHeader';
 
 interface DocketContentProps {
     userData: {
@@ -122,7 +122,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
 
             {/* MIDDLE COLUMN */}
             <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
-                <DashboardHeader userData={userData} />
+                <DocketHeader userData={userData} />
 
                 <div className="mt-6">
                     {/* Controls Bar */}
@@ -145,7 +145,9 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     <option value="For Review">For Review</option>
                                     <option value="all">All Status</option>
                                 </select>
-                                <img src="/icon16.png" alt="dropdown" className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </div>
 
                             {/* TYPE FILTER */}
@@ -163,7 +165,9 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     ))}
                                     <option value="all">All Requests</option>
                                 </select>
-                                <img src="/icon16.png" alt="dropdown" className="w-4 h-4 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </div>
 
                             {/* MARK AS DROPDOWN */}
@@ -189,7 +193,9 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     <option value="FOR REVIEW">For Review</option>
                                     <option value="COMPLETED">Completed</option>
                                 </select>
-                                <img src="/icon16.png" alt="dropdown" className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                             </div>
                         </div>
                     </div>
