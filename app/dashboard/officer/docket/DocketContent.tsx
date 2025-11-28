@@ -8,12 +8,13 @@ import DocketDetailsModal from "@/components/DocketDetailsModal";
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
-import { usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
 
 interface DocketContentProps {
     userData: {
+        id: string;
         first_name: string;
         last_name: string;
         role: string;
@@ -24,12 +25,15 @@ interface DocketContentProps {
 }
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
+    const searchParams = useSearchParams();
+    const initialStatus = searchParams.get('status') || 'all';
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState(initialStatus);
     const [filterType, setFilterType] = useState('all');
     const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -41,7 +45,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
 
     const fetchDockets = async () => {
         setIsLoading(true);
-        const data = await getDockets();
+        const data = await getDockets(userData.id);
         setDockets(data);
         setIsLoading(false);
     };

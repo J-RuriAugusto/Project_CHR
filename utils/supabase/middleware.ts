@@ -68,7 +68,45 @@ export const updateSession = async (request: NextRequest) => {
 
     // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
-    await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+      if (!user) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+
+      // Fetch user role
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', user.email)
+        .single();
+
+      if (userData) {
+        const role = userData.role;
+        const path = request.nextUrl.pathname;
+
+        // Define allowed paths for each role
+        const rolePaths: { [key: string]: string } = {
+          'admin': '/dashboard/admin',
+          'investigation_chief': '/dashboard/investigation_chief',
+          'records_officer': '/dashboard/records_officer',
+          'officer': '/dashboard/officer',
+          'regional_director': '/dashboard/regional_director',
+          'legal_chief': '/dashboard/legal_chief',
+        };
+
+        const allowedPath = rolePaths[role];
+
+        // If the user is in a dashboard route but not their allowed one
+        if (allowedPath && !path.startsWith(allowedPath)) {
+          // Avoid redirect loop if they are already being redirected or on the correct path
+          if (path !== allowedPath) {
+            return NextResponse.redirect(new URL(allowedPath, request.url));
+          }
+        }
+      }
+    }
 
     return response;
   } catch (e) {

@@ -12,6 +12,8 @@ import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
 
+import { useSearchParams } from 'next/navigation';
+
 interface DocketContentProps {
     userData: {
         first_name: string;
@@ -24,12 +26,15 @@ interface DocketContentProps {
 }
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
+    const searchParams = useSearchParams();
+    const initialStatus = searchParams.get('status') || 'all';
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState(initialStatus);
     const [filterType, setFilterType] = useState('all');
     const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -66,7 +71,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
 
     const handleStatusUpdate = async (status: string) => {
         if (selectedDockets.length === 0) return;
-        
+
         setIsUpdating(true);
         const result = await updateDocketStatus(selectedDockets, status);
         setIsUpdating(false);
@@ -78,7 +83,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
             alert('Failed to update status');
         }
     };
-    
+
     const handleRowClick = (docketId: string) => {
         setSelectedDocketId(docketId);
         setIsDetailsModalOpen(true);
@@ -93,7 +98,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
 
     const basePath = `/dashboard/${userData.role}`;
     const currentPath = usePathname() || "/";
-    
+
     return (
         <div className="h-screen flex bg-gray-50">
             {/* LEFT COLUMN */}

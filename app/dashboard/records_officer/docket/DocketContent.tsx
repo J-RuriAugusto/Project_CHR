@@ -9,6 +9,8 @@ import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus, deleteDockets } from '@/lib/actions/docket-actions';
 
+import { useSearchParams } from 'next/navigation';
+
 interface DocketContentProps {
     userData: {
         first_name: string;
@@ -21,12 +23,15 @@ interface DocketContentProps {
 }
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
+    const searchParams = useSearchParams();
+    const initialStatus = searchParams.get('status') || 'all';
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState(initialStatus);
     const [filterType, setFilterType] = useState('all');
     const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);

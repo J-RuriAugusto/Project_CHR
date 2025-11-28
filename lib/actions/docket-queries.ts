@@ -17,10 +17,10 @@ export interface DocketListItem {
 /**
  * Fetch all dockets with computed status and days till deadline
  */
-export async function getDockets(): Promise<DocketListItem[]> {
+export async function getDockets(userId?: string): Promise<DocketListItem[]> {
     const supabase = createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('dockets')
         .select(`
             id,
@@ -35,6 +35,42 @@ export async function getDockets(): Promise<DocketListItem[]> {
             )
         `)
         .order('updated_at', { ascending: false });
+
+    if (userId) {
+        // If userId is provided, we need to filter dockets where this user is assigned.
+        // We use !inner to ensure we only get dockets that have a matching staff record.
+        // Note: This filters the returned docket_staff array to ONLY contain this user.
+        // If we want to show ALL staff for these dockets, we would need a more complex query (e.g. aliases),
+        // but for now, showing just the assigned officer (the current user) in the "Assigned To" column
+        // for their own dashboard is acceptable, or we can assume the "Assigned To" logic handles it.
+        // Actually, let's try to use an alias if possible, but Supabase simple client might be tricky with aliases in the same query builder chain if not careful.
+        // Let's stick to the simple filter first. If the user complains about "Assigned To" only showing themselves, we can improve.
+        // However, the current query selects `docket_staff`. If we add a filter on `docket_staff.user_id`, it implicitly adds !inner logic if we are not careful, or we explicitly ask for it.
+
+        // To properly filter dockets BY user but return ALL staff, we need:
+        // .select('..., all_staff:docket_staff(...), my_staff:docket_staff!inner(user_id)')
+        // .eq('my_staff.user_id', userId)
+
+        query = supabase
+            .from('dockets')
+            .select(`
+                id,
+                docket_number,
+                deadline,
+                updated_at,
+                status,
+                type_of_request_id,
+                request_types!type_of_request_id (name),
+                docket_staff (
+                    users (first_name, last_name)
+                ),
+                filter_staff:docket_staff!inner(user_id)
+            `)
+            .eq('filter_staff.user_id', userId)
+            .order('updated_at', { ascending: false });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error('Error fetching dockets:', error);

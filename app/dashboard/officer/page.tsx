@@ -6,6 +6,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { headers } from "next/headers";
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
+import { getDashboardStats } from '@/lib/actions/dashboard-stats';
 
 export default async function OfficerDashboard() {
   const supabase = await createClient();
@@ -21,14 +22,16 @@ export default async function OfficerDashboard() {
   // Fetch user data from the users table
   const { data: userData, error } = await supabase
     .from('users')
-    .select('first_name, last_name, role')
+    .select('id, first_name, last_name, role')
     .eq('email', session.user.email)
     .single();
 
   if (error || !userData || userData.role !== 'officer') {
-    await supabase.auth.signOut();
-    return redirect('/login?message=You do not have the required permissions');
+    // Middleware handles redirection
+    return null;
   }
+
+  const stats = await getDashboardStats(userData.id);
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -68,74 +71,84 @@ export default async function OfficerDashboard() {
 
             {/* Dashboard Cards */}
             <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="bg-softBlue p-4 rounded-lg shadow relative overflow-hidden">
-                <div className="absolute top-4 right-4 shadow-sm">
-                  <Image
-                    src="/icon1.png"
-                    alt="Active Cases Icon"
-                    width={45}
-                    height={45}
-                    className="object-contain"
-                  />
-                </div>
+              <Link href="/dashboard/officer/docket?status=Active" className="block">
+                <div className="bg-softBlue p-4 rounded-lg shadow relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <div className="absolute top-4 right-4 shadow-sm">
+                    <Image
+                      src="/icon1.png"
+                      alt="Active Cases Icon"
+                      width={45}
+                      height={45}
+                      className="object-contain"
+                    />
+                  </div>
 
-                <div className="pt-10">
-                  <h6 className="text-6xl text-steelBlue font-semibold">30</h6>
-                  <h3 className="text-base text-steelBlue font-semibold">Total Active Cases</h3>
-                  <p className="text-sm text-skyRoyal font-semibold">+5 this month</p>
+                  <div className="pt-10">
+                    <h6 className="text-6xl text-steelBlue font-semibold">{stats.activeCases.count}</h6>
+                    <h3 className="text-base text-steelBlue font-semibold">Total Active Cases</h3>
+                    <p className="text-sm text-skyRoyal font-semibold">+{stats.activeCases.thisMonth} this month</p>
+                  </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="bg-babyPink p-4 rounded-lg shadow relative overflow-hidden">
-                <div className="absolute top-4 right-4 shadow-sm">
-                  <Image
-                    src="/icon2.png"
-                    alt="Overdue Cases Icon"
-                    width={45}
-                    height={45}
-                    className="object-contain"
-                  />
+              <Link href="/dashboard/officer/docket?status=Overdue" className="block">
+                <div className="bg-babyPink p-4 rounded-lg shadow relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <div className="absolute top-4 right-4 shadow-sm">
+                    <Image
+                      src="/icon2.png"
+                      alt="Overdue Cases Icon"
+                      width={45}
+                      height={45}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="pt-10">
+                    <h6 className="text-6xl text-crimsonRose font-semibold">{stats.overdueCases.count}</h6>
+                    <h3 className="text-base text-crimsonRose font-semibold">Overdue Cases</h3>
+                    <p className="text-sm text-dustyCoral font-semibold">+{stats.overdueCases.thisMonth} this month</p>
+                  </div>
                 </div>
-                <div className="pt-10">
-                  <h6 className="text-6xl text-crimsonRose font-semibold">10</h6>
-                  <h3 className="text-base text-crimsonRose font-semibold">Overdue Cases</h3>
-                  <p className="text-sm text-dustyCoral font-semibold">+2 this month</p>
-                </div>
-              </div>
+              </Link>
 
-              <div className="bg-paleCream p-4 rounded-lg shadow relative overflow-hidden">
-                <div className="absolute top-4 right-4 shadow-sm">
-                  <Image
-                    src="/icon3.png"
-                    alt="Pending Review Icon"
-                    width={45}
-                    height={45}
-                    className="object-contain"
-                  />
+              <Link href="/dashboard/officer/docket?status=For%20Review" className="block">
+                <div className="bg-paleCream p-4 rounded-lg shadow relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <div className="absolute top-4 right-4 shadow-sm">
+                    <Image
+                      src="/icon3.png"
+                      alt="Pending Review Icon"
+                      width={45}
+                      height={45}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="pt-10">
+                    <h6 className="text-6xl text-antiqueGold font-semibold">{stats.pendingReview.count}</h6>
+                    <h3 className="text-base text-antiqueGold font-semibold">Pending for Review/Approval</h3>
+                    <p className="text-sm text-mutedMustard font-semibold">+{stats.pendingReview.thisMonth} this month</p>
+                  </div>
                 </div>
-                <div className="pt-10">
-                  <h6 className="text-6xl text-antiqueGold font-semibold">10</h6>
-                  <h3 className="text-base text-antiqueGold font-semibold">Pending for Review/Approval</h3>
-                  <p className="text-sm text-mutedMustard font-semibold">+2 this month</p>
-                </div>
-              </div>
+              </Link>
 
-              <div className="bg-mintGreen p-4 rounded-lg shadow relative overflow-hidden">
-                <div className="absolute top-4 right-4 shadow-sm">
-                  <Image
-                    src="/icon4.png"
-                    alt="Completed Cases Icon"
-                    width={45}
-                    height={45}
-                    className="object-contain"
-                  />
+              <Link href="/dashboard/officer/docket?status=Completed" className="block">
+                <div className="bg-mintGreen p-4 rounded-lg shadow relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <div className="absolute top-4 right-4 shadow-sm">
+                    <Image
+                      src="/icon4.png"
+                      alt="Completed Cases Icon"
+                      width={45}
+                      height={45}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="pt-10">
+                    <h6 className="text-6xl text-emeraldGreen font-semibold">{stats.completedCases.count}</h6>
+                    <h3 className="text-base text-emeraldGreen font-semibold">Completed Cases</h3>
+                    {stats.completedCases.thisMonth > 0 && (
+                      <p className="text-sm text-mintyGreen font-semibold">+{stats.completedCases.thisMonth} this month</p>
+                    )}
+                  </div>
                 </div>
-                <div className="pt-10">
-                  <h6 className="text-6xl text-emeraldGreen font-semibold">10</h6>
-                  <h3 className="text-base text-emeraldGreen font-semibold">Completed Cases</h3>
-                  <p className="text-sm text-mintyGreen font-semibold">+3 this month</p>
-                </div>
-              </div>
+              </Link>
             </div>
           </div>
 
@@ -338,7 +351,7 @@ export default async function OfficerDashboard() {
                     </h3>
                     <div className="flex items-center justify-center space-x-6 pt-4">
                       <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
-
+                      {/* Legend */}
                       <div className="flex flex-col space-y-2">
                         <div className="flex items-center space-x-2">
                           <span className="w-3 h-3 rounded-full bg-oceanBlue"></span>
@@ -369,7 +382,7 @@ export default async function OfficerDashboard() {
                     </h3>
                     <div className="flex items-center justify-center space-x-6 pt-4">
                       <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
-
+                      {/* Legend */}
                       <div className="flex flex-col space-y-2">
                         <div className="flex items-center space-x-2">
                           <span className="w-3 h-3 rounded-full bg-paleGreen"></span>
