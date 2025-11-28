@@ -21,8 +21,6 @@ function StatusBadge({ status }: { status: string }) {
         'Completed': 'bg-brightGreen text-white',
         'Pending': 'bg-white text-golden border border-golden',
         'For Review': 'bg-transparent text-golden border border-golden',
-
-
     };
 
     const style = statusStyles[status as keyof typeof statusStyles] || 'bg-gray-200 text-gray-800';

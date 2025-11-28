@@ -1,14 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import DocketTable from './DocketTable';
-import DocketCaseModal from "@/components/DocketCaseModal";
-import DocketDetailsModal from "@/components/DocketDetailsModal";
+import { usePathname } from 'next/navigation';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
-import { usePathname } from 'next/navigation';
+import DocketTable from './DocketTable';
+import DocketCaseModal from "@/components/DocketCaseModal";
+import DocketDetailsModal from "@/components/DocketDetailsModal";
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
 
@@ -184,11 +183,11 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                         if (e.target.value) {
                                             if (selectedDockets.length === 0) {
                                                 alert("Please select at least one docket to update.");
-                                                e.target.value = ""; // Reset select
+                                                e.target.value = "";
                                                 return;
                                             }
                                             handleStatusUpdate(e.target.value);
-                                            e.target.value = ""; // Reset select
+                                            e.target.value = "";
                                         }
                                     }}
                                     disabled={isUpdating}

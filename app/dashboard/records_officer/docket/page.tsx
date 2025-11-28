@@ -1,8 +1,8 @@
-import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import DocketContent from './DocketContent';
-import { signOut } from './actions';
+import { createClient } from '@/utils/supabase/server';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
+import { signOut } from '../../../../components/actions';
+import DocketContent from './DocketContent';
 
 export default async function Docket() {
     const supabase = createClient();

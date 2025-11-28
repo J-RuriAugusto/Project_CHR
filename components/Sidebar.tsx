@@ -4,7 +4,7 @@ import Link from "next/link";
 
 interface SidebarProps {
     currentPath: string | null;
-    role?: string; // Optional with ?
+    role?: string;
 }
 
 export default function Sidebar({ currentPath, role = 'investigation_chief' }: SidebarProps) {
@@ -19,8 +19,8 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: S
                     <Link
                         href={basePath}
                         className={`flex justify-start space-x-3 text-base font-semibold transition pl-10
-                ${currentPath === basePath || currentPath === `${basePath}/`
-                                ? "text-white bg-blue-600 rounded-md py-2"
+                            ${currentPath === basePath || currentPath === `${basePath}/`
+                                ? "text-white rounded-md py-2"
                                 : "text-paleSky hover:text-white"
                             }`}
                     >
@@ -33,8 +33,8 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: S
                     <Link
                         href={`${basePath}/docket`}
                         className={`flex justify-start space-x-3 text-base font-semibold transition pl-10
-                ${currentPath === `${basePath}/docket`
-                                ? "text-white bg-blue-600 rounded-md py-2"
+                            ${currentPath === `${basePath}/docket`
+                                ? "text-white rounded-md py-2"
                                 : "text-paleSky hover:text-white"
                             }`}
                     >
