@@ -20,7 +20,7 @@ export interface DocketListItem {
 export async function getDockets(userId?: string): Promise<DocketListItem[]> {
     const supabase = createClient();
 
-    let query = supabase
+    let query: any = supabase
         .from('dockets')
         .select(`
             id,
