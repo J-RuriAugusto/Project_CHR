@@ -83,6 +83,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     const [showDeadlineCalendar, setShowDeadlineCalendar] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [calendarMode, setCalendarMode] = useState<'dateReceived' | 'deadline'>('dateReceived');
 
     // Sector dropdown state for victims
     const [openVictimSectorDropdown, setOpenVictimSectorDropdown] = useState<number | null>(null);
@@ -302,47 +303,73 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         return new Date(year, month, 1).getDay();
     };
 
-    const handleDateSelect = (day: number, field: 'received' | 'deadline') => {
-        const selectedDate = new Date(selectedYear, selectedMonth, day);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    const handleDateSelect = (day: number) => {
+        const formattedDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
 
-        if (field === 'received') {
-            if (selectedDate > today) {
-                alert("Date received cannot be in the future.");
-                return;
-            }
-            setDateReceived(selectedDate.toLocaleDateString('en-US'));
+        if (calendarMode === 'dateReceived') {
+            setDateReceived(formattedDate);
             setShowCalendar(false);
-        } else {
-            // For deadline, we might want to check if it's before received date
-            const received = new Date(dateReceived);
-            if (!isNaN(received.getTime()) && selectedDate < received) {
-                alert("Deadline cannot be before Date Received.");
-                return;
-            }
-            setDeadline(selectedDate.toLocaleDateString('en-US'));
-            setShowDeadlineCalendar(false);
+        } else if (calendarMode === 'deadline') {
+            setDeadline(formattedDate);
+            setShowCalendar(false);
         }
     };
 
-    const renderCalendar = (field: 'received' | 'deadline') => {
+    const isDateReceived = (day: number) => {
+        if (!dateReceived) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+        return checkDate === dateReceived;
+    };
+
+    const isDeadline = (day: number) => {
+        if (!deadline) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+        return checkDate === deadline;
+    };
+
+    const renderCalendar = () => {
         const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
         const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
         const days = [];
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         for (let i = 0; i < firstDay; i++) {
             days.push(<div key={`empty-${i}`} className="p-2"></div>);
         }
 
         for (let day = 1; day <= daysInMonth; day++) {
+            const isReceivedDate = isDateReceived(day);
+            const isDeadlineDate = isDeadline(day);
+            
+            let buttonClass = "w-10 h-10 flex items-center justify-center rounded-full text-sm transition-colors ";
+            
+            if (isDeadlineDate) {
+                buttonClass += "bg-blue text-white font-semibold";
+            } else if (isReceivedDate) {
+                buttonClass += "bg-sky text-blue font-semibold";
+            } else {
+                buttonClass += "text-gray-700 hover:bg-sky";
+            }
+
             days.push(
                 <button
                     key={day}
-                    onClick={() => handleDateSelect(day, field)}
-                    className="p-2 hover:bg-blue-100 rounded text-sm"
+                    onClick={() => handleDateSelect(day)}
+                    className={buttonClass}
                 >
                     {day}
                 </button>
@@ -350,11 +377,45 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         }
 
         return (
-            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-64">
+            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
                 <div className="flex justify-between items-center mb-4">
-                    <button onClick={() => setSelectedMonth(selectedMonth - 1)} className="p-1">←</button>
-                    <span>{monthNames[selectedMonth]} {selectedYear}</span>
-                    <button onClick={() => setSelectedMonth(selectedMonth + 1)} className="p-1">→</button>
+                    <button 
+                        onClick={() => {
+                            if (selectedMonth === 0) {
+                                setSelectedMonth(11);
+                                setSelectedYear(selectedYear - 1);
+                            } else {
+                                setSelectedMonth(selectedMonth - 1);
+                            }
+                        }} 
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        ←
+                    </button>
+                    <div className="text-center">
+                        <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
+                        <div className="text-sm text-blue font-semibold">Select Dates</div>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            if (selectedMonth === 11) {
+                                setSelectedMonth(0);
+                                setSelectedYear(selectedYear + 1);
+                            } else {
+                                setSelectedMonth(selectedMonth + 1);
+                            }
+                        }} 
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        →
+                    </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {dayNames.map(dayName => (
+                        <div key={dayName} className="w-10 h-8 flex items-center justify-center text-xs font-semibold text-gray-500">
+                            {dayName}
+                        </div>
+                    ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1">
                     {days}
@@ -394,14 +455,14 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             <button
                 type="button"
                 onClick={onToggle}
-                className="w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                className="w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
                         ? `${selectedSectors.length} selected`
                         : 'Pick the Sector...'}
                 </span>
-                <ChevronDown size={16} />
+                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </button>
 
             {isOpen && (
@@ -456,7 +517,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                     <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                         <div className="bg-sky p-4 flex justify-between items-center border-b">
                             <div>
-                                <label className="block text-graphite text-sm font-medium mb-2">
+                                <label className="block text-graphite text-sm font-semibold mb-2">
                                     Docket Number
                                 </label>
                                 <input
@@ -466,7 +527,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                     onChange={(e) => setDocketNumber(e.target.value)}
                                     onFocus={handleDocketNumberFocus}
                                     onBlur={handleDocketNumberBlur}
-                                    className="bg-white text-midnightNavy border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                             <button
@@ -477,80 +538,59 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                             </button>
                         </div>
 
-                        <div className="p-6 bg-snow">
+                        <div className="p-6 bg-snowWhite">
                             <div className="grid grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-4">
                                     <div className="relative">
-                                        <label className="block text-graphite text-sm font-medium mb-2">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
                                             Date Received
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="mm/dd/yyyy"
-                                                value={dateReceived}
+                                                value={dateReceived || 'Nov 18, 2025'}
                                                 onChange={(e) => setDateReceived(e.target.value)}
-                                                onBlur={() => {
-                                                    const d = new Date(dateReceived);
-                                                    const today = new Date();
-                                                    today.setHours(0, 0, 0, 0);
-                                                    if (!isNaN(d.getTime()) && d > today) {
-                                                        alert("Date received cannot be in the future.");
-                                                        setDateReceived(today.toLocaleDateString('en-US'));
-                                                    }
-                                                }}
-                                                className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="flex-1 text-black border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sky"
                                             />
                                             <button
                                                 onClick={() => {
+                                                    setCalendarMode('dateReceived');
                                                     setShowCalendar(!showCalendar);
-                                                    setShowDeadlineCalendar(false);
                                                 }}
                                                 className="text-royal hover:text-ash"
                                             >
-                                                <Calendar size={20} />
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
                                             </button>
                                         </div>
-                                        {showCalendar && renderCalendar('received')}
+                                        {showCalendar && renderCalendar()}
                                     </div>
 
                                     <div>
-                                        <label className="block text-graphite text-sm font-medium mb-2">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
                                             Deadline
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="mm/dd/yyyy"
-                                                value={deadline}
+                                                value={deadline || 'Feb 24, 2026'}
                                                 onChange={(e) => setDeadline(e.target.value)}
-                                                onBlur={() => {
-                                                    const d = new Date(deadline);
-                                                    const r = new Date(dateReceived);
-                                                    if (!isNaN(d.getTime()) && !isNaN(r.getTime()) && d < r) {
-                                                        alert("Deadline cannot be before Date Received.");
-                                                        setDeadline('');
-                                                    }
-                                                }}
-                                                className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="flex-1 text-black border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sky"
                                             />
                                             <button
-                                                type="button"
                                                 onClick={() => {
-                                                    setShowDeadlineCalendar(!showDeadlineCalendar);
-                                                    setShowCalendar(false);
+                                                    setCalendarMode('deadline');
+                                                    setShowCalendar(!showCalendar);
                                                 }}
                                                 className="text-royal hover:text-ash"
                                             >
-                                                <Calendar size={20} />
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
                                             </button>
                                         </div>
-                                        {showDeadlineCalendar && renderCalendar('deadline')}
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-medium">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
                                                 Victims ({victims.filter(v => v.name.trim() !== '').length})
                                             </label>
                                             <button
@@ -621,8 +661,8 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-medium">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
                                                 Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
                                             </label>
                                             <button
@@ -672,7 +712,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-graphite text-sm font-medium mb-2">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
                                             Type of Request
                                         </label>
                                         <select
@@ -696,27 +736,28 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                     }
                                                 }
                                             }}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
+                                            className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
                                         >
-                                            <option value="">Pick the type of Request...</option>
+                                            <option value="">Pick the Type of Request...</option>
                                             {lookups.requestTypes.map((type) => (
                                                 <option key={type.id} value={type.id}>
                                                     {type.name}
                                                 </option>
                                             ))}
                                         </select>
+                                        {/* <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" /> */}
                                     </div>
 
                                     <div>
-                                        <label className="block text-graphite text-sm font-medium mb-2">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
                                             Mode of Request
                                         </label>
                                         <select
                                             value={modeOfRequest}
                                             onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
-                                            <option value="">Pick the mode...</option>
+                                            <option value="">Pick the Mode of Request...</option>
                                             {lookups.requestModes.map((mode) => (
                                                 <option key={mode.id} value={mode.id}>
                                                     {mode.name}
@@ -726,8 +767,8 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-medium">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
                                                 Respondents ({respondents.filter(r => r.name.trim() !== '').length})
                                             </label>
                                             <button
@@ -798,15 +839,15 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-graphite text-sm font-medium mb-2">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
                                             Category of Alleged Violation
                                         </label>
                                         <select
                                             value={category}
                                             onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
+                                            className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
                                         >
-                                            <option value="">Pick the category of alleged...</option>
+                                            <option value="">Pick the Category of Alleged...</option>
                                             {lookups.violationCategories.map((cat) => (
                                                 <option key={cat.id} value={cat.id}>
                                                     {cat.name}
@@ -817,7 +858,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-medium">
+                                            <label className="block text-graphite text-sm font-semibold">
                                                 Right(s) Violated ({selectedRights.length})
                                             </label>
                                         </div>
@@ -827,14 +868,14 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                             <button
                                                 type="button"
                                                 onClick={() => setOpenRightsDropdown(!openRightsDropdown)}
-                                                className="w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                                                className="w-full text-left text-ash bg-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
                                             >
                                                 <span className="truncate">
                                                     {selectedRights.length > 0
                                                         ? `${selectedRights.length} selected`
-                                                        : 'Pick the right(s) violated...'}
+                                                        : 'Pick the Right(s) Violated...'}
                                                 </span>
-                                                <ChevronDown size={16} />
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                             </button>
 
                                             {openRightsDropdown && (
@@ -848,7 +889,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                                 placeholder="Search rights..."
                                                                 value={rightsSearch}
                                                                 onChange={(e) => setRightsSearch(e.target.value)}
-                                                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className="w-full pl-9 pr-3 py-2 text-sm text-ash rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                 onClick={(e) => e.stopPropagation()}
                                                             />
                                                         </div>

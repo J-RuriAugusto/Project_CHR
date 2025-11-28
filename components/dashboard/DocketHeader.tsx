@@ -39,10 +39,10 @@ export default function DocketHeader({ userData }: DocketHeaderProps) {
             }`}>
                 <input
                 type="text"
-                placeholder="Search case by docket number or keyword..."
+                placeholder="Search case by docket number or key..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-midnightNavy rounded-full text-sm text-midnightNavy outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 border border-midnightNavy rounded-full text-xs text-midnightNavy outline-none focus:border-blue-500"
                 />
             </div>
             <button className="p-2 rounded-full hover:bg-snowWhite transition ml-2">

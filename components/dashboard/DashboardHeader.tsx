@@ -35,14 +35,14 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
           onMouseLeave={() => setIsSearchOpen(false)}
         >
           <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isSearchOpen ? 'w-80 opacity-100' : 'w-0 opacity-0'
+            isSearchOpen ? 'w-60 opacity-100' : 'w-0 opacity-0'
           }`}>
             <input
               type="text"
-              placeholder="Search case by docket number or keyword..."
+              placeholder="Search case by docket number or key..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-midnightNavy rounded-full text-sm text-midnightNavy outline-none focus:border-blue-500"
+              className="w-full px-4 py-2 border border-midnightNavy rounded-full text-xs text-midnightNavy outline-none focus:border-blue-500"
             />
           </div>
           <button className="p-2 rounded-full hover:bg-snowWhite transition ml-2">
