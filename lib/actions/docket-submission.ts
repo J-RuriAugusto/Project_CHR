@@ -8,9 +8,9 @@ export interface DocketSubmissionData {
     dateReceived: string;
     deadline: string;
     typeOfRequestId: number;
-    categoryId: number;
+    violationCategory: string;
     modeOfRequestId: number;
-    selectedRightIds: number[];
+    rightsViolated: string[];
     victims: { name: string; sectorNames: string[] }[];
     respondents: { name: string; sectorNames: string[] }[];
     staffInChargeIds: string[];
@@ -97,7 +97,7 @@ export async function submitDocket(
                 date_received: dateReceivedDB,
                 deadline: deadlineDB,
                 type_of_request_id: data.typeOfRequestId,
-                category_id: data.categoryId,
+                violation_category: data.violationCategory,
                 mode_of_request_id: data.modeOfRequestId,
                 created_by_user_id: publicUserId, // Use the ID from public.users
                 status: 'PENDING'
@@ -125,10 +125,10 @@ export async function submitDocket(
         const docketId = docketData.id;
 
         // 2. Insert into docket_rights junction table
-        if (data.selectedRightIds.length > 0) {
-            const rightsToInsert = data.selectedRightIds.map(rightId => ({
+        if (data.rightsViolated.length > 0) {
+            const rightsToInsert = data.rightsViolated.map(rightName => ({
                 docket_id: docketId,
-                right_id: rightId
+                right_name: rightName
             }));
 
             const { error: rightsError } = await supabase

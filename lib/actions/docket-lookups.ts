@@ -35,21 +35,10 @@ export async function getRequestTypes(): Promise<LookupItem[]> {
 
 /**
  * Fetch all violation categories from the database
+ * NOTE: Table removed, returning empty array as categories are now open text
  */
 export async function getViolationCategories(): Promise<LookupItem[]> {
-    const supabase = createClient();
-
-    const { data, error } = await supabase
-        .from('violation_categories')
-        .select('id, name')
-        .order('name');
-
-    if (error) {
-        console.error('Error fetching violation categories:', error);
-        return [];
-    }
-
-    return data || [];
+    return [];
 }
 
 /**
@@ -73,38 +62,25 @@ export async function getRequestModes(): Promise<LookupItem[]> {
 
 /**
  * Fetch all human rights from the database
+ * NOTE: Table removed, returning empty array as rights are now open text
  */
 export async function getHumanRights(): Promise<LookupItem[]> {
-    const supabase = createClient();
-
-    const { data, error } = await supabase
-        .from('human_rights')
-        .select('id, name')
-        .order('name');
-
-    if (error) {
-        console.error('Error fetching human rights:', error);
-        return [];
-    }
-
-    return data || [];
+    return [];
 }
 
 /**
  * Fetch all docket lookup data in a single optimized call
  */
 export async function getAllDocketLookups(): Promise<DocketLookups> {
-    const [requestTypes, violationCategories, requestModes, humanRights] = await Promise.all([
+    const [requestTypes, requestModes] = await Promise.all([
         getRequestTypes(),
-        getViolationCategories(),
         getRequestModes(),
-        getHumanRights(),
     ]);
 
     return {
         requestTypes,
-        violationCategories,
+        violationCategories: [],
         requestModes,
-        humanRights,
+        humanRights: [],
     };
 }

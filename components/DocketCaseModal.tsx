@@ -67,9 +67,9 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     const [dateReceived, setDateReceived] = useState(new Date().toLocaleDateString('en-US'));
     const [deadline, setDeadline] = useState(new Date().toLocaleDateString('en-US'));
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
-    const [category, setCategory] = useState<number | ''>('');
+    const [categories, setCategories] = useState<string[]>(['']);
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
-    const [selectedRights, setSelectedRights] = useState<number[]>([]);
+    const [rights, setRights] = useState<string[]>(['']);
 
     // Updated state for Victims and Respondents - both support multiple sectors
     // Initialize victims with one empty field
@@ -80,7 +80,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
 
     const [showCalendar, setShowCalendar] = useState(false);
-    const [showDeadlineCalendar, setShowDeadlineCalendar] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [calendarMode, setCalendarMode] = useState<'dateReceived' | 'deadline'>('dateReceived');
@@ -95,11 +94,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     const [respondentSectorSearch, setRespondentSectorSearch] = useState('');
     const respondentDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Rights dropdown state
-    const [openRightsDropdown, setOpenRightsDropdown] = useState(false);
-    const [rightsSearch, setRightsSearch] = useState('');
-    const rightsDropdownRef = useRef<HTMLDivElement>(null);
-
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -110,10 +104,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             if (respondentDropdownRef.current && !respondentDropdownRef.current.contains(event.target as Node)) {
                 setOpenRespondentSectorDropdown(null);
                 setRespondentSectorSearch('');
-            }
-            if (rightsDropdownRef.current && !rightsDropdownRef.current.contains(event.target as Node)) {
-                setOpenRightsDropdown(false);
-                setRightsSearch('');
             }
         };
 
@@ -133,22 +123,72 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         setDateReceived(new Date().toLocaleDateString('en-US'));
         setDeadline(new Date().toLocaleDateString('en-US'));
         setTypeOfRequest('');
-        setCategory('');
+        setCategories(['']);
         setModeOfRequest('');
-        setSelectedRights([]);
+        setRights(['']);
         setVictims([{ name: '', sectors: [] }]);
         setRespondents([]);
         setStaff([{ userId: '', email: '' }]);
         setShowCalendar(false);
-        setShowDeadlineCalendar(false);
     };
 
-    // Rights Violated Handlers
-    const toggleRight = (rightId: number) => {
-        if (selectedRights.includes(rightId)) {
-            setSelectedRights(selectedRights.filter(id => id !== rightId));
+    // Calculate deadline based on request type and date received
+    const calculateDeadline = (dateReceivedStr: string, typeId: number | '') => {
+        if (!dateReceivedStr || typeId === '') return;
+
+        const requestType = lookups.requestTypes.find(t => t.id === typeId);
+        if (!requestType) return;
+
+        const receivedDate = new Date(dateReceivedStr);
+        if (isNaN(receivedDate.getTime())) return;
+
+        // Add 1 day to start counting from the next day
+        const startDate = new Date(receivedDate);
+        startDate.setDate(startDate.getDate() + 1);
+
+        let daysToAdd = 0;
+        if (requestType.name === 'Legal Assistance / OPS') {
+            daysToAdd = 120;
+        } else if (requestType.name === 'Legal Investigation') {
+            daysToAdd = 60;
         } else {
-            setSelectedRights([...selectedRights, rightId]);
+            return; // Don't autofill for other types
+        }
+
+        const deadlineDate = new Date(startDate);
+        deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+
+        setDeadline(deadlineDate.toLocaleDateString('en-US'));
+    };
+
+    // Effect to trigger calculation when dependencies change
+    useEffect(() => {
+        calculateDeadline(dateReceived, typeOfRequest);
+    }, [dateReceived, typeOfRequest]);
+
+    // Category Handlers
+    const addCategory = () => setCategories([...categories, '']);
+    const updateCategory = (index: number, value: string) => {
+        const newCategories = [...categories];
+        newCategories[index] = value;
+        setCategories(newCategories);
+    };
+    const removeCategory = (index: number) => {
+        if (categories.length > 1) {
+            setCategories(categories.filter((_, i) => i !== index));
+        }
+    };
+
+    // Rights Handlers
+    const addRight = () => setRights([...rights, '']);
+    const updateRight = (index: number, value: string) => {
+        const newRights = [...rights];
+        newRights[index] = value;
+        setRights(newRights);
+    };
+    const removeRight = (index: number) => {
+        if (rights.length > 1) {
+            setRights(rights.filter((_, i) => i !== index));
         }
     };
 
@@ -260,9 +300,9 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             dateReceived,
             deadline,
             typeOfRequest,
-            category,
+            violationCategory: categories,
             modeOfRequest,
-            selectedRights,
+            rightsViolated: rights,
             victims,
             respondents,
             staff
@@ -279,9 +319,9 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
             dateReceived,
             deadline,
             typeOfRequest,
-            category,
+            violationCategory: categories,
             modeOfRequest,
-            selectedRights,
+            rightsViolated: rights,
             victims,
             respondents,
             staff
@@ -354,9 +394,9 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         for (let day = 1; day <= daysInMonth; day++) {
             const isReceivedDate = isDateReceived(day);
             const isDeadlineDate = isDeadline(day);
-            
+
             let buttonClass = "w-10 h-10 flex items-center justify-center rounded-full text-sm transition-colors ";
-            
+
             if (isDeadlineDate) {
                 buttonClass += "bg-blue text-white font-semibold";
             } else if (isReceivedDate) {
@@ -379,7 +419,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         return (
             <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
                 <div className="flex justify-between items-center mb-4">
-                    <button 
+                    <button
                         onClick={() => {
                             if (selectedMonth === 0) {
                                 setSelectedMonth(11);
@@ -387,7 +427,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                             } else {
                                 setSelectedMonth(selectedMonth - 1);
                             }
-                        }} 
+                        }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
                         ←
@@ -396,7 +436,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                         <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
                         <div className="text-sm text-blue font-semibold">Select Dates</div>
                     </div>
-                    <button 
+                    <button
                         onClick={() => {
                             if (selectedMonth === 11) {
                                 setSelectedMonth(0);
@@ -404,7 +444,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                             } else {
                                 setSelectedMonth(selectedMonth + 1);
                             }
-                        }} 
+                        }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
                         →
@@ -431,11 +471,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
     const filteredRespondentSectors = SECTORS.filter(sector =>
         sector.toLowerCase().includes(respondentSectorSearch.toLowerCase())
-    );
-
-    // Filter rights based on search
-    const filteredRights = lookups.humanRights.filter(right =>
-        right.name.toLowerCase().includes(rightsSearch.toLowerCase())
     );
 
     // Render sector dropdown component
@@ -745,7 +780,6 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                 </option>
                                             ))}
                                         </select>
-                                        {/* <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" /> */}
                                     </div>
 
                                     <div>
@@ -839,120 +873,81 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Category of Alleged Violation
-                                        </label>
-                                        <select
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
-                                        >
-                                            <option value="">Pick the Category of Alleged...</option>
-                                            {lookups.violationCategories.map((cat) => (
-                                                <option key={cat.id} value={cat.id}>
-                                                    {cat.name}
-                                                </option>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addCategory}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {categories.map((cat, index) => (
+                                                <div key={index} className="flex gap-2 items-center">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter category..."
+                                                        value={cat}
+                                                        onChange={(e) => updateCategory(index, e.target.value)}
+                                                        className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                    {categories.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeCategory(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ))}
-                                        </select>
+                                        </div>
                                     </div>
 
                                     <div>
-                                        <div className="flex items-center gap-2 mb-2">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
-                                                Right(s) Violated ({selectedRights.length})
+                                                Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
                                             </label>
-                                        </div>
-
-                                        {/* Multi-Select Dropdown for Rights */}
-                                        <div className="relative" ref={openRightsDropdown ? rightsDropdownRef : null}>
                                             <button
-                                                type="button"
-                                                onClick={() => setOpenRightsDropdown(!openRightsDropdown)}
-                                                className="w-full text-left text-ash bg-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                                                onClick={addRight}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                             >
-                                                <span className="truncate">
-                                                    {selectedRights.length > 0
-                                                        ? `${selectedRights.length} selected`
-                                                        : 'Pick the Right(s) Violated...'}
-                                                </span>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                <Plus size={16} />
                                             </button>
-
-                                            {openRightsDropdown && (
-                                                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                                                    {/* Search Bar */}
-                                                    <div className="p-2 border-b border-gray-200">
-                                                        <div className="relative">
-                                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Search rights..."
-                                                                value={rightsSearch}
-                                                                onChange={(e) => setRightsSearch(e.target.value)}
-                                                                className="w-full pl-9 pr-3 py-2 text-sm text-ash rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Scrollable Options */}
-                                                    <div className="max-h-60 overflow-y-auto">
-                                                        {filteredRights.length > 0 ? (
-                                                            filteredRights.map((right) => (
-                                                                <label
-                                                                    key={right.id}
-                                                                    className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={selectedRights.includes(right.id)}
-                                                                        onChange={() => toggleRight(right.id)}
-                                                                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                                    />
-                                                                    <span className="text-gray-700">{right.name}</span>
-                                                                </label>
-                                                            ))
-                                                        ) : (
-                                                            <div className="px-3 py-2 text-sm text-gray-500">
-                                                                No rights found
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
-
-                                        {/* Selected Rights Display */}
-                                        {selectedRights.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {selectedRights.map((rightId) => {
-                                                    const right = lookups.humanRights.find(r => r.id === rightId);
-                                                    return right ? (
-                                                        <span
-                                                            key={rightId}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                        <div className="space-y-3">
+                                            {rights.map((right, index) => (
+                                                <div key={index} className="flex gap-2 items-center">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter right violated..."
+                                                        value={right}
+                                                        onChange={(e) => updateRight(index, e.target.value)}
+                                                        className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                    {rights.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeRight(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                         >
-                                                            {right.name}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toggleRight(rightId)}
-                                                                className="hover:text-blue-900"
-                                                            >
-                                                                <XCircle size={14} className="text-blue-600" />
-                                                            </button>
-                                                        </span>
-                                                    ) : null;
-                                                })}
-                                            </div>
-                                        )}
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-4">
+                            <div className="flex justify-end p-6 border-t bg-gray-50">
                                 <button
                                     onClick={handleSubmit}
-                                    className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                    className="bg-blue hover:bg-highlight text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors"
                                 >
                                     Submit for Docketing
                                 </button>

@@ -90,7 +90,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             date_received: dateReceivedDB,
             deadline: deadlineDB,
             type_of_request_id: data.typeOfRequestId,
-            category_id: data.categoryId,
+            violation_category: data.violationCategory,
             mode_of_request_id: data.modeOfRequestId,
             // staff_in_charge_id removed
         };
@@ -120,10 +120,10 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             return { success: false, error: 'Failed to update rights' };
         }
 
-        if (data.selectedRightIds.length > 0) {
-            const rightsToInsert = data.selectedRightIds.map(rightId => ({
+        if (data.rightsViolated.length > 0) {
+            const rightsToInsert = data.rightsViolated.map(rightName => ({
                 docket_id: docketId,
-                right_id: rightId
+                right_name: rightName
             }));
 
             const { error: insertRightsError } = await supabase

@@ -51,7 +51,7 @@ export function computeStatus(deadline: Date): 'Overdue' | 'Urgent' | 'Due' | 'A
         return 'Overdue';
     } else if (daysUntilDeadline === 0) {
         return 'Due';
-    } else if (daysUntilDeadline <= 5) {
+    } else if (daysUntilDeadline <= 7) {
         return 'Urgent';
     } else {
         return 'Active';

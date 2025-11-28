@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
-import { useSearchParams, usePathname } from 'next/navigation';
 import DocketTable from './DocketTable';
 import DocketCaseModal from "@/components/DocketCaseModal";
 import DocketDetailsModal from "@/components/DocketDetailsModal";

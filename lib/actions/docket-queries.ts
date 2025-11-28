@@ -171,7 +171,7 @@ export async function getDocketDetails(id: string) {
     // 2. Fetch rights
     const { data: rights, error: rightsError } = await supabase
         .from('docket_rights')
-        .select('right_id')
+        .select('right_name')
         .eq('docket_id', id);
 
     if (rightsError) {
@@ -223,9 +223,9 @@ export async function getDocketDetails(id: string) {
         dateReceived: new Date(docket.date_received).toLocaleDateString('en-US'),
         deadline: new Date(docket.deadline).toLocaleDateString('en-US'),
         typeOfRequestId: docket.type_of_request_id,
-        categoryId: docket.category_id,
+        violationCategory: docket.violation_category,
         modeOfRequestId: docket.mode_of_request_id,
-        selectedRights: rights.map((r: any) => r.right_id),
+        rightsViolated: rights.map((r: any) => r.right_name),
         victims,
         respondents,
         staff: staff.length > 0 ? staff : [{ userId: '', email: '' }],

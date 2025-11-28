@@ -75,9 +75,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const [dateReceived, setDateReceived] = useState('');
     const [deadline, setDeadline] = useState('');
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
-    const [category, setCategory] = useState<number | ''>('');
+    const [categories, setCategories] = useState<string[]>(['']);
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
-    const [selectedRights, setSelectedRights] = useState<number[]>([]);
+    const [rightsViolated, setRightsViolated] = useState<string[]>(['']);
     const [status, setStatus] = useState<string>('Pending');
 
     const isEditable = status === 'Pending' && currentUserRole !== 'officer';
@@ -104,11 +104,6 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const [respondentSectorSearch, setRespondentSectorSearch] = useState('');
     const respondentDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Rights dropdown state
-    const [openRightsDropdown, setOpenRightsDropdown] = useState(false);
-    const [rightsSearch, setRightsSearch] = useState('');
-    const rightsDropdownRef = useRef<HTMLDivElement>(null);
-
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -119,10 +114,6 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             if (respondentDropdownRef.current && !respondentDropdownRef.current.contains(event.target as Node)) {
                 setOpenRespondentSectorDropdown(null);
                 setRespondentSectorSearch('');
-            }
-            if (rightsDropdownRef.current && !rightsDropdownRef.current.contains(event.target as Node)) {
-                setOpenRightsDropdown(false);
-                setRightsSearch('');
             }
         };
 
@@ -151,9 +142,23 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 setDateReceived(details.dateReceived);
                 setDeadline(details.deadline);
                 setTypeOfRequest(details.typeOfRequestId);
-                setCategory(details.categoryId || '');
+
+                // Handle categories (split by comma if it's a string, or use as is)
+                if (details.violationCategory) {
+                    setCategories(details.violationCategory.split(',').map((c: string) => c.trim()));
+                } else {
+                    setCategories(['']);
+                }
+
                 setModeOfRequest(details.modeOfRequestId);
-                setSelectedRights(details.selectedRights);
+
+                // Handle rights
+                if (details.rightsViolated && details.rightsViolated.length > 0) {
+                    setRightsViolated(details.rightsViolated);
+                } else {
+                    setRightsViolated(['']);
+                }
+
                 setVictims(details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }]);
                 setRespondents(details.respondents.length > 0 ? details.respondents : []);
                 setStaff(details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }]);
@@ -174,9 +179,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                     dateReceived: details.dateReceived,
                     deadline: details.deadline,
                     typeOfRequest: details.typeOfRequestId,
-                    category: details.categoryId || '',
+                    categories: details.violationCategory ? details.violationCategory.split(',').map((c: string) => c.trim()) : [''],
                     modeOfRequest: details.modeOfRequestId,
-                    selectedRights: details.selectedRights,
+                    rightsViolated: details.rightsViolated && details.rightsViolated.length > 0 ? details.rightsViolated : [''],
                     victims: details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }],
                     respondents: details.respondents.length > 0 ? details.respondents : [],
                     staff: details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }],
@@ -196,9 +201,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         setDateReceived('');
         setDeadline('');
         setTypeOfRequest('');
-        setCategory('');
+        setCategories(['']);
         setModeOfRequest('');
-        setSelectedRights([]);
+        setRightsViolated(['']);
         setVictims([{ name: '', sectors: [] }]);
         setRespondents([]);
         setStaff([{ userId: '', email: '' }]);
@@ -207,12 +212,74 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         setShowDeadlineCalendar(false);
     };
 
-    // Rights Violated Handlers
-    const toggleRight = (rightId: number) => {
-        if (selectedRights.includes(rightId)) {
-            setSelectedRights(selectedRights.filter(id => id !== rightId));
+    // Calculate deadline based on request type and date received
+    const calculateDeadline = (dateReceivedStr: string, typeId: number | '') => {
+        if (!dateReceivedStr || typeId === '') return;
+
+        const requestType = lookups.requestTypes.find(t => t.id === typeId);
+        if (!requestType) return;
+
+        const receivedDate = new Date(dateReceivedStr);
+        if (isNaN(receivedDate.getTime())) return;
+
+        // Add 1 day to start counting from the next day
+        const startDate = new Date(receivedDate);
+        startDate.setDate(startDate.getDate() + 1);
+
+        let daysToAdd = 0;
+        if (requestType.name === 'Legal Assistance / OPS') {
+            daysToAdd = 120;
+        } else if (requestType.name === 'Legal Investigation') {
+            daysToAdd = 60;
         } else {
-            setSelectedRights([...selectedRights, rightId]);
+            return; // Don't autofill for other types
+        }
+
+        const deadlineDate = new Date(startDate);
+        deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+
+        setDeadline(deadlineDate.toLocaleDateString('en-US'));
+    };
+
+    // Handlers for inputs that trigger deadline calculation
+    const handleTypeOfRequestChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newValue = e.target.value ? Number(e.target.value) : '';
+        setTypeOfRequest(newValue);
+        calculateDeadline(dateReceived, newValue);
+    };
+
+    const handleDateReceivedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setDateReceived(newValue);
+        // Only calculate if it's a valid date string (simple check)
+        if (newValue.split('/').length === 3) {
+            calculateDeadline(newValue, typeOfRequest);
+        }
+    };
+
+    // Category Handlers
+    const addCategory = () => setCategories([...categories, '']);
+    const updateCategory = (index: number, value: string) => {
+        const newCategories = [...categories];
+        newCategories[index] = value;
+        setCategories(newCategories);
+    };
+    const removeCategory = (index: number) => {
+        if (categories.length > 1) {
+            setCategories(categories.filter((_, i) => i !== index));
+        }
+    };
+
+    // Rights Handlers
+    const addRight = () => setRightsViolated([...rightsViolated, '']);
+    const updateRight = (index: number, value: string) => {
+        const newRights = [...rightsViolated];
+        newRights[index] = value;
+        setRightsViolated(newRights);
+    };
+    const removeRight = (index: number) => {
+        if (rightsViolated.length > 1) {
+            setRightsViolated(rightsViolated.filter((_, i) => i !== index));
         }
     };
 
@@ -348,9 +415,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 dateReceived,
                 deadline,
                 typeOfRequest,
-                category,
+                categories,
                 modeOfRequest,
-                selectedRights,
+                rightsViolated,
                 victims,
                 respondents,
                 staff,
@@ -367,8 +434,6 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 }
             } else {
                 // For others, check everything (simplified JSON comparison)
-                // Note: This might be sensitive to order, but for this use case it's likely sufficient
-                // or we can just rely on the fact that if they didn't touch anything, the state objects match.
                 if (JSON.stringify(initialState) === JSON.stringify(currentFormState)) {
                     alert("No changes made.");
                     return;
@@ -409,12 +474,29 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             errors.push('Deadline must be in mm/dd/yyyy format and must be a valid date');
         }
 
-        // 4. Validate Rights Violated
-        if (selectedRights.length === 0) {
-            errors.push('At least one Right Violated must be selected');
+        // 4. Validate Category of Alleged Violation
+        const validCategories = categories.filter(c => c.trim() !== '');
+        if (validCategories.length === 0) {
+            errors.push('At least one Category of Alleged Violation is required');
+        } else {
+            const uniqueCategories = new Set(validCategories.map(c => c.trim().toLowerCase()));
+            if (uniqueCategories.size !== validCategories.length) {
+                errors.push('Duplicate categories are not allowed');
+            }
         }
 
-        // 5. Validate Victims
+        // 5. Validate Rights Violated
+        const validRights = rightsViolated.filter(r => r.trim() !== '');
+        if (validRights.length === 0) {
+            errors.push('At least one Right Violated is required');
+        } else {
+            const uniqueRights = new Set(validRights.map(r => r.trim().toLowerCase()));
+            if (uniqueRights.size !== validRights.length) {
+                errors.push('Duplicate rights are not allowed');
+            }
+        }
+
+        // 6. Validate Victims
         const validVictims = victims.filter(v => v.name.trim() !== '');
         if (validVictims.length === 0) {
             errors.push('At least one Victim is required');
@@ -427,7 +509,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             });
         }
 
-        // 6. Validate Respondents (can be none, but if exists, must have sectors)
+        // 7. Validate Respondents (can be none, but if exists, must have sectors)
         const validRespondents = respondents.filter(r => r.name.trim() !== '');
         if (validRespondents.length > 0) {
             validRespondents.forEach((respondent, index) => {
@@ -437,13 +519,12 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             });
         }
 
-        // 7. Validate Staff in Charge
+        // 8. Validate Staff in Charge
         const assignedStaff = staff.filter(s => s.userId.trim() !== '');
         if (assignedStaff.length === 0) {
             errors.push('At least one Staff in Charge must be assigned');
         }
 
-        // Show results
         // Show results
         if (errors.length > 0) {
             alert('Please fix the following errors:\n\n' + errors.map((err, i) => `${i + 1}. ${err}`).join('\n'));
@@ -457,9 +538,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 dateReceived,
                 deadline,
                 typeOfRequestId: Number(typeOfRequest),
-                categoryId: Number(category),
+                violationCategory: categories.join(','), // Join categories with comma
                 modeOfRequestId: Number(modeOfRequest),
-                selectedRightIds: selectedRights,
+                rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
                 respondents: respondents.map(r => ({ name: r.name, sectorNames: r.sectors })),
                 staffInChargeIds: assignedStaff.map(s => s.userId)
@@ -522,6 +603,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             }
             setDateReceived(selectedDate.toLocaleDateString('en-US'));
             setShowCalendar(false);
+            calculateDeadline(selectedDate.toLocaleDateString('en-US'), typeOfRequest);
         } else {
             const received = new Date(dateReceived);
             if (!isNaN(received.getTime()) && selectedDate < received) {
@@ -579,11 +661,6 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         sector.toLowerCase().includes(respondentSectorSearch.toLowerCase())
     );
 
-    // Filter rights based on search
-    const filteredRights = lookups.humanRights.filter(right =>
-        right.name.toLowerCase().includes(rightsSearch.toLowerCase())
-    );
-
     // Render sector dropdown component
     const renderSectorDropdown = (
         type: 'victim' | 'respondent',
@@ -610,7 +687,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                         ? `${selectedSectors.length} selected`
                         : 'Pick the Sector...'}
                 </span>
-                <ChevronDown size={16} />
+                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </button>
 
             {isOpen && (
@@ -727,7 +804,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                     type="text"
                                                     placeholder="mm/dd/yyyy"
                                                     value={dateReceived}
-                                                    onChange={(e) => setDateReceived(e.target.value)}
+                                                    onChange={handleDateReceivedChange}
                                                     disabled={!isEditable}
                                                     className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
@@ -910,7 +987,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             </label>
                                             <select
                                                 value={typeOfRequest}
-                                                onChange={(e) => setTypeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                onChange={handleTypeOfRequestChange}
                                                 disabled={!isEditable}
                                                 className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
@@ -1021,115 +1098,79 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-graphite text-sm font-medium mb-2">
-                                                Category of Alleged Violation
-                                            </label>
-                                            <select
-                                                value={category}
-                                                onChange={(e) => setCategory(e.target.value ? Number(e.target.value) : '')}
-                                                disabled={!isEditable}
-                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            >
-                                                <option value="">Pick the category of alleged...</option>
-                                                {lookups.violationCategories.map((cat) => (
-                                                    <option key={cat.id} value={cat.id}>
-                                                        {cat.name}
-                                                    </option>
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-medium">
+                                                    Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                                </label>
+                                                <button
+                                                    onClick={addCategory}
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {categories.map((cat, index) => (
+                                                    <div key={index} className="flex gap-2 items-center">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter category..."
+                                                            value={cat}
+                                                            onChange={(e) => updateCategory(index, e.target.value)}
+                                                            disabled={!isEditable}
+                                                            className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        />
+                                                        {categories.length > 1 && (
+                                                            <button
+                                                                onClick={() => removeCategory(index)}
+                                                                disabled={!isEditable}
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
 
                                         <div>
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
                                                 <label className="block text-graphite text-sm font-medium">
-                                                    Right(s) Violated ({selectedRights.length})
+                                                    Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
                                                 </label>
-                                            </div>
-
-                                            {/* Multi-Select Dropdown for Rights */}
-                                            <div className="relative" ref={openRightsDropdown ? rightsDropdownRef : null}>
                                                 <button
-                                                    type="button"
-                                                    onClick={() => setOpenRightsDropdown(!openRightsDropdown)}
+                                                    onClick={addRight}
                                                     disabled={!isEditable}
-                                                    className={`w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
-                                                    <span className="truncate">
-                                                        {selectedRights.length > 0
-                                                            ? `${selectedRights.length} selected`
-                                                            : 'Pick the right(s) violated...'}
-                                                    </span>
-                                                    <ChevronDown size={16} />
+                                                    <Plus size={16} />
                                                 </button>
-
-                                                {openRightsDropdown && (
-                                                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                                                        {/* Search Bar */}
-                                                        <div className="p-2 border-b border-gray-200">
-                                                            <div className="relative">
-                                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Search rights..."
-                                                                    value={rightsSearch}
-                                                                    onChange={(e) => setRightsSearch(e.target.value)}
-                                                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Scrollable Options */}
-                                                        <div className="max-h-60 overflow-y-auto">
-                                                            {filteredRights.length > 0 ? (
-                                                                filteredRights.map((right) => (
-                                                                    <label
-                                                                        key={right.id}
-                                                                        className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                                                                    >
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={selectedRights.includes(right.id)}
-                                                                            onChange={() => toggleRight(right.id)}
-                                                                            className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                                        />
-                                                                        <span className="text-gray-700">{right.name}</span>
-                                                                    </label>
-                                                                ))
-                                                            ) : (
-                                                                <div className="px-3 py-2 text-sm text-gray-500">
-                                                                    No rights found
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
-
-                                            {/* Selected Rights Display */}
-                                            {selectedRights.length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {selectedRights.map((rightId) => {
-                                                        const right = lookups.humanRights.find(r => r.id === rightId);
-                                                        return right ? (
-                                                            <span
-                                                                key={rightId}
-                                                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                            <div className="space-y-3">
+                                                {rightsViolated.map((right, index) => (
+                                                    <div key={index} className="flex gap-2 items-center">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Enter right violated..."
+                                                            value={right}
+                                                            onChange={(e) => updateRight(index, e.target.value)}
+                                                            disabled={!isEditable}
+                                                            className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        />
+                                                        {rightsViolated.length > 1 && (
+                                                            <button
+                                                                onClick={() => removeRight(index)}
+                                                                disabled={!isEditable}
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
-                                                                {right.name}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => toggleRight(rightId)}
-                                                                    disabled={!isEditable}
-                                                                    className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
-                                                                >
-                                                                    <XCircle size={14} className="text-blue-600" />
-                                                                </button>
-                                                            </span>
-                                                        ) : null;
-                                                    })}
-                                                </div>
-                                            )}
+                                                                <X size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
 

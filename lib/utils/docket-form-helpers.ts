@@ -12,9 +12,9 @@ interface DocketFormData {
     dateReceived: string;
     deadline: string;
     typeOfRequest: number | '';
-    category: number | '';
+    violationCategory: string[];
     modeOfRequest: number | '';
-    selectedRights: number[];
+    rightsViolated: string[];
     victims: { name: string; sectors: string[] }[];
     respondents: { name: string; sectors: string[] }[];
     staff: { userId: string; email: string }[];
@@ -41,8 +41,14 @@ export async function validateDocketForm(formData: DocketFormData): Promise<Vali
     }
 
     // Category
-    if (formData.category === '') {
-        errors.category = 'Category is required';
+    const validCategories = formData.violationCategory.filter(c => c.trim() !== '');
+    if (validCategories.length === 0) {
+        errors.category = 'At least one Category is required';
+    } else {
+        const uniqueCategories = new Set(validCategories.map(c => c.trim().toLowerCase()));
+        if (uniqueCategories.size !== validCategories.length) {
+            errors.category = 'Duplicate categories are not allowed';
+        }
     }
 
     // Mode of Request
@@ -51,8 +57,14 @@ export async function validateDocketForm(formData: DocketFormData): Promise<Vali
     }
 
     // Rights Violated
-    if (formData.selectedRights.length === 0) {
-        errors.rights = 'At least one right must be selected';
+    const validRights = formData.rightsViolated.filter(r => r.trim() !== '');
+    if (validRights.length === 0) {
+        errors.rights = 'At least one Right Violated is required';
+    } else {
+        const uniqueRights = new Set(validRights.map(r => r.trim().toLowerCase()));
+        if (uniqueRights.size !== validRights.length) {
+            errors.rights = 'Duplicate rights are not allowed';
+        }
     }
 
     // Date validation
@@ -119,14 +131,18 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
     const respondentsWithNames = formData.respondents.filter(r => r.name.trim() !== '');
 
     // Prepare submission data
+    // Join categories with comma
+    const violationCategory = formData.violationCategory.filter(c => c.trim() !== '').join(', ');
+    const rightsViolated = formData.rightsViolated.filter(r => r.trim() !== '');
+
     const submissionData: DocketSubmissionData = {
         docketNumber: formData.docketNumber,
         dateReceived: formData.dateReceived,
         deadline: formData.deadline,
         typeOfRequestId: formData.typeOfRequest as number,
-        categoryId: formData.category as number,
+        violationCategory: violationCategory,
         modeOfRequestId: formData.modeOfRequest as number,
-        selectedRightIds: formData.selectedRights,
+        rightsViolated: rightsViolated,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),
         respondents: respondentsWithNames.map(r => ({ name: r.name, sectorNames: r.sectors })),
         staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId)
