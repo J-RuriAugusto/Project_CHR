@@ -89,3 +89,69 @@ export async function getDashboardStats(userId?: string): Promise<DashboardStats
 
     return stats;
 }
+
+export async function getUrgentCases(userId?: string) {
+    const supabase = createClient();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate start and end of "This Week" (Monday to Sunday)
+    const currentDay = today.getDay(); // 0 is Sunday
+    const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() + diffToMonday);
+    const thisWeekEnd = new Date(thisWeekStart);
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+
+    // Calculate start and end of "Last Week"
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(lastWeekStart);
+    lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+
+    // Base query
+    let query = supabase
+        .from('dockets')
+        .select(`
+            id,
+            docket_number,
+            deadline,
+            status,
+            request_types (name),
+            docket_staff!inner (user_id)
+        `)
+        .in('status', ['PENDING', 'FOR REVIEW']);
+
+    // Filter by user if provided
+    if (userId) {
+        query = query.eq('docket_staff.user_id', userId);
+    }
+
+    const { data: dockets, error } = await query;
+
+    if (error) {
+        console.error('Error fetching urgent cases:', error);
+        return { dueThisWeek: [], dueLastWeek: [] };
+    }
+
+    const dueThisWeek: any[] = [];
+    const dueLastWeek: any[] = [];
+
+    dockets?.forEach((docket: any) => {
+        const deadline = new Date(docket.deadline);
+        // Normalize deadline to compare dates properly
+        deadline.setHours(0, 0, 0, 0);
+
+        if (deadline >= thisWeekStart && deadline <= thisWeekEnd) {
+            dueThisWeek.push(docket);
+        } else if (deadline >= lastWeekStart && deadline <= lastWeekEnd) {
+            dueLastWeek.push(docket);
+        }
+    });
+
+    // Sort by deadline (asc)
+    dueThisWeek.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+    dueLastWeek.sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+
+    return { dueThisWeek, dueLastWeek };
+}

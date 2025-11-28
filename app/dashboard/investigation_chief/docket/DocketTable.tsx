@@ -124,12 +124,10 @@ export default function DocketTable({ dockets, selectedDockets, onSelectionChang
                         </td>
                         <td className="px-4 py-2 text-sm text-black">{docket.assignedTo}</td>
                         <td className="px-4 py-2 text-sm text-deepNavy">
-                            {['Completed', 'For Review'].includes(docket.status) ? (
+                            {['Completed', 'Terminated', 'Void'].includes(docket.status) ? (
                                 <div className="pl-14">—</div>
                             ) : (
-                                docket.daysTillDeadline < 0
-                                    ? `${docket.daysTillDeadline} days`
-                                    : `${docket.daysTillDeadline} days`
+                                `${docket.daysTillDeadline} ${Math.abs(docket.daysTillDeadline) === 1 ? 'day' : 'days'}`
                             )}
                         </td>
                         <td className="px-4 py-2 text-sm text-black">{docket.lastUpdated}</td>

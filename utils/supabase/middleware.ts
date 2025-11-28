@@ -66,13 +66,18 @@ export const updateSession = async (request: NextRequest) => {
     // Feel free to remove once you have Supabase connected.
     const { supabase, response } = createClient(request);
 
+    // Redirect /login to /
+    if (request.nextUrl.pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
     // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
     const { data: { user } } = await supabase.auth.getUser();
 
     if (request.nextUrl.pathname.startsWith('/dashboard')) {
       if (!user) {
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.redirect(new URL('/', request.url));
       }
 
       // Fetch user role

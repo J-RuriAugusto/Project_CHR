@@ -344,11 +344,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     };
 
     const handleDateSelect = (day: number) => {
-        const formattedDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+        const formattedDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
 
         if (calendarMode === 'dateReceived') {
             setDateReceived(formattedDate);
@@ -361,21 +357,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
     const isDateReceived = (day: number) => {
         if (!dateReceived) return false;
-        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
         return checkDate === dateReceived;
     };
 
     const isDeadline = (day: number) => {
         if (!deadline) return false;
-        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-        });
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
         return checkDate === deadline;
     };
 

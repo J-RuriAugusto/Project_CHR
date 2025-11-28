@@ -615,23 +615,49 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         }
     };
 
+    const isDateReceived = (day: number) => {
+        if (!dateReceived) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
+        return checkDate === dateReceived;
+    };
+
+    const isDeadline = (day: number) => {
+        if (!deadline) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
+        return checkDate === deadline;
+    };
+
     const renderCalendar = (field: 'received' | 'deadline') => {
         const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
         const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
         const days = [];
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         for (let i = 0; i < firstDay; i++) {
             days.push(<div key={`empty-${i}`} className="p-2"></div>);
         }
 
         for (let day = 1; day <= daysInMonth; day++) {
+            const isReceivedDate = isDateReceived(day);
+            const isDeadlineDate = isDeadline(day);
+
+            let buttonClass = "w-10 h-10 flex items-center justify-center rounded-full text-sm transition-colors ";
+
+            if (isDeadlineDate) {
+                buttonClass += "bg-blue text-white font-semibold";
+            } else if (isReceivedDate) {
+                buttonClass += "bg-sky text-blue font-semibold";
+            } else {
+                buttonClass += "text-gray-700 hover:bg-sky";
+            }
+
             days.push(
                 <button
                     key={day}
                     onClick={() => handleDateSelect(day, field)}
-                    className="p-2 hover:bg-blue-100 rounded text-sm"
+                    className={buttonClass}
                 >
                     {day}
                 </button>
@@ -639,11 +665,45 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         }
 
         return (
-            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-64">
+            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
                 <div className="flex justify-between items-center mb-4">
-                    <button onClick={() => setSelectedMonth(selectedMonth - 1)} className="p-1">←</button>
-                    <span>{monthNames[selectedMonth]} {selectedYear}</span>
-                    <button onClick={() => setSelectedMonth(selectedMonth + 1)} className="p-1">→</button>
+                    <button
+                        onClick={() => {
+                            if (selectedMonth === 0) {
+                                setSelectedMonth(11);
+                                setSelectedYear(selectedYear - 1);
+                            } else {
+                                setSelectedMonth(selectedMonth - 1);
+                            }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        ←
+                    </button>
+                    <div className="text-center">
+                        <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
+                        <div className="text-sm text-blue font-semibold">Select Dates</div>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (selectedMonth === 11) {
+                                setSelectedMonth(0);
+                                setSelectedYear(selectedYear + 1);
+                            } else {
+                                setSelectedMonth(selectedMonth + 1);
+                            }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        →
+                    </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {dayNames.map(dayName => (
+                        <div key={dayName} className="w-10 h-8 flex items-center justify-center text-xs font-semibold text-gray-500">
+                            {dayName}
+                        </div>
+                    ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1">
                     {days}

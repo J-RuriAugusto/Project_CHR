@@ -2,8 +2,13 @@ import { Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 
 export const metadata = {
-  title: "Supabase Next Auth",
+  title: "CHR-CMMS",
   description: "",
+  icons: {
+    icon: '/favicon-32x32.png',
+    shortcut: '/favicon-32x32.png',
+    apple: '/favicon-32x32.png',
+  },
 };
 
 const sourceSans = Source_Sans_3({
