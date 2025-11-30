@@ -7,7 +7,7 @@ import { getDocketDetails, checkDocketNumberExists } from '@/lib/actions/docket-
 import { deleteDockets, updateDocket } from "@/lib/actions/docket-actions";
 import { DocketSubmissionData } from '@/lib/actions/docket-submission';
 
-interface DocketDetailsModalProps {
+interface DocketViewMotoModalProps {
     isOpen: boolean;
     onClose: () => void;
     docketId: string | null;
@@ -65,34 +65,35 @@ const SECTORS = [
     "Children in Street Situations"
 ];
 
-export default function DocketDetailsModal({ isOpen, onClose, docketId, users, lookups, currentUserRole }: DocketDetailsModalProps) {
+export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, lookups, currentUserRole }: DocketViewMotoModalProps) {
     const currentYear = new Date().getFullYear();
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-
     const [originalDocketNumber, setOriginalDocketNumber] = useState('');
     const [docketNumber, setDocketNumber] = useState('');
     const [dateReceived, setDateReceived] = useState('');
     const [deadline, setDeadline] = useState('');
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
     const [categories, setCategories] = useState<string[]>(['']);
+    const [complainant, setComplainant] = useState<string[]>(['']);
+    const [contact, setContact] = useState<string>('');
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
     const [rightsViolated, setRightsViolated] = useState<string[]>(['']);
     const [status, setStatus] = useState<string>('Pending');
-
     const isEditable = status === 'Pending' && currentUserRole !== 'officer';
+
 
     // Updated state for Victims and Respondents - both support multiple sectors
     const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
-    const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([]);
+    const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
 
     // Staff state
     const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
-
     const [showCalendar, setShowCalendar] = useState(false);
     const [showDeadlineCalendar, setShowDeadlineCalendar] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [calendarMode, setCalendarMode] = useState<'dateReceived' | 'deadline'>('dateReceived');
 
     // Sector dropdown state for victims
     const [openVictimSectorDropdown, setOpenVictimSectorDropdown] = useState<number | null>(null);
@@ -201,6 +202,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         setDateReceived('');
         setDeadline('');
         setTypeOfRequest('');
+        setComplainant(['']);
+        setContact('');
         setCategories(['']);
         setModeOfRequest('');
         setRightsViolated(['']);
@@ -257,8 +260,15 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         }
     };
 
+
     // Category Handlers
-    const addCategory = () => setCategories([...categories, '']);
+    // const addCategory = () => {
+    //     const lastCategory = categories[categories.length - 1];
+            // Only add if the last category has content
+    //     if (lastCategory && lastCategory.trim() !== '') {
+    //         setCategories([...categories, '']);
+    //     }
+    // };
     const updateCategory = (index: number, value: string) => {
         const newCategories = [...categories];
         newCategories[index] = value;
@@ -271,7 +281,13 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     };
 
     // Rights Handlers
-    const addRight = () => setRightsViolated([...rightsViolated, '']);
+    // const addRight = () => {
+    //     const lastRight = rights[rights.length - 1];
+            // Only add if the last right has content
+    //     if (lastRight && lastRight.trim() !== '') {
+    //         setRights([...rights, '']);
+    //     }
+    // };
     const updateRight = (index: number, value: string) => {
         const newRights = [...rightsViolated];
         newRights[index] = value;
@@ -285,7 +301,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
     // Victim Handlers
     const addVictimField = () => {
-        setVictims([...victims, { name: '', sectors: [] }]);
+        const lastVictim = victims[victims.length - 1];
+        // Only add if the last victim has a name
+        if (lastVictim && lastVictim.name.trim() !== '') {
+            setVictims([...victims, { name: '', sectors: [] }]);
+        }
     };
 
     const updateVictimName = (index: number, value: string) => {
@@ -297,13 +317,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
     const toggleVictimSector = (victimIndex: number, sector: string) => {
         const newVictims = [...victims];
         const sectors = newVictims[victimIndex].sectors;
-
         if (sectors.includes(sector)) {
             newVictims[victimIndex].sectors = sectors.filter(s => s !== sector);
         } else {
             newVictims[victimIndex].sectors = [...sectors, sector];
         }
-
         setVictims(newVictims);
     };
 
@@ -315,7 +333,16 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
     // Respondent Handlers
     const addRespondentField = () => {
-        setRespondents([...respondents, { name: '', sectors: [] }]);
+        // If empty, add first field
+        if (respondents.length === 0) {
+            setRespondents([{ name: '', sectors: [] }]);
+        } else {
+            const lastRespondent = respondents[respondents.length - 1];
+            // Only add if the last respondent has a name
+            if (lastRespondent && lastRespondent.name.trim() !== '') {
+                setRespondents([...respondents, { name: '', sectors: [] }]);
+            }
+        }
     };
 
     const updateRespondentName = (index: number, value: string) => {
@@ -343,7 +370,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
     // Staff Handlers
     const addStaffField = () => {
-        setStaff([...staff, { userId: '', email: '' }]);
+        const lastStaff = staff[staff.length - 1];
+        // Only add if the last staff has been assigned
+        if (lastStaff && lastStaff.userId.trim() !== '') {
+            setStaff([...staff, { userId: '', email: '' }]);
+        }
     };
 
     const updateStaff = (index: number, userId: string) => {
@@ -386,14 +417,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
     const validateDateFormat = (dateString: string): boolean => {
         if (!dateString) return false;
-
         const parts = dateString.split('/');
         if (parts.length !== 3) return false;
-
         const month = parseInt(parts[0], 10);
         const day = parseInt(parts[1], 10);
         const year = parseInt(parts[2], 10);
-
         if (isNaN(month) || isNaN(day) || isNaN(year)) return false;
 
         // Validate month (1-12) and day (1-31)
@@ -416,6 +444,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 deadline,
                 typeOfRequest,
                 categories,
+            //  complainant,
+            //  contact,
                 modeOfRequest,
                 rightsViolated,
                 victims,
@@ -538,7 +568,9 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 dateReceived,
                 deadline,
                 typeOfRequestId: Number(typeOfRequest),
-                violationCategory: categories.join(','), // Join categories with comma
+                violationCategory: categories.join(','),
+                // name: complainant.join(','),
+                // number: contact.join(','),
                 modeOfRequestId: Number(modeOfRequest),
                 rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
@@ -678,7 +710,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
-                        ←
+                        <img src="/icon23.png" alt="Previous" className="w-5 h-5" />
                     </button>
                     <div className="text-center">
                         <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
@@ -695,7 +727,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
-                        →
+                        <img src="/icon24.png" alt="Next" className="w-5 h-5" />
                     </button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-2">
@@ -740,7 +772,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                 type="button"
                 onClick={onToggle}
                 disabled={disabled}
-                className={`w-full text-left text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
@@ -751,17 +783,17 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
             </button>
 
             {isOpen && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg">
                     {/* Search Bar */}
-                    <div className="p-2 border-b border-gray-200">
+                    <div className="p-2 border-b">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search sectors..."
                                 value={searchValue}
                                 onChange={(e) => onSearch(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         </div>
@@ -779,13 +811,13 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                         type="checkbox"
                                         checked={selectedSectors.includes(sector)}
                                         onChange={() => onToggleSector(sector)}
-                                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        className="mr-2 h-4 w-4 text-black border-royal rounded focus:ring-blue-500"
                                     />
-                                    <span className="text-gray-700">{sector}</span>
+                                    <span className="text-black">{sector}</span>
                                 </label>
                             ))
                         ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">
+                            <div className="px-3 py-2 text-sm text-black">
                                 No sectors found
                             </div>
                         )}
@@ -799,10 +831,10 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
         <div>
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="bg-sky p-4 flex justify-between items-center border-b">
+                    <div className="rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="bg-sky p-4 flex justify-between items-center">
                             <div>
-                                <label className="block text-graphite text-sm font-medium mb-2">
+                                <label className="block text-graphite text-sm font-semibold mb-1">
                                     Docket Number
                                 </label>
                                 <input
@@ -813,29 +845,31 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                     onFocus={handleDocketNumberFocus}
                                     onBlur={handleDocketNumberBlur}
                                     disabled={!isEditable}
-                                    className={`bg-white text-midnightNavy border border-gray-300 rounded-lg px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 />
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <img src="/icon22.png" alt="Time" className="w-6 h-6" />
+                                    <span className="text-deepNavy text-xl font-semibold">102 days</span>
+                                </div>
                                 <div>
-                                    <label className="block text-graphite text-sm font-medium mb-2">
+                                    <label className="block text-graphite text-sm font-semibold mb-1">
                                         Status
                                     </label>
                                     <select
                                         value={status}
                                         onChange={(e) => setStatus(e.target.value)}
-                                        className="bg-white text-midnightNavy border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                        className="bg-white text-midnightNavy rounded-full px-4 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                     >
                                         <option value="Pending">Pending</option>
                                         <option value="For Review">For Review</option>
-
-
                                         {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
                                     </select>
-                                </div>
+                                </div> 
                                 <button
                                     onClick={onClose}
-                                    className="text-royal hover:text-blue mt-6"
+                                    className="text-royal hover:text-blue justify-self-end"
                                 >
                                     <X size={24} />
                                 </button>
@@ -843,11 +877,11 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                         </div>
 
                         {isLoading ? (
-                            <div className="p-12 text-center text-gray-500">
+                            <div className="p-12 text-center text-midnightNavy">
                                 Loading details...
                             </div>
                         ) : (
-                            <div className="p-6 bg-snow">
+                            <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
                                 {!isEditable && currentUserRole !== 'officer' && (
                                     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm font-medium">
                                         Non-pending status cannot be edited. Please change the status to Pending to make changes.
@@ -856,7 +890,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                 <div className="grid grid-cols-3 gap-6 mb-6">
                                     <div className="space-y-4">
                                         <div className="relative">
-                                            <label className="block text-graphite text-sm font-medium mb-2">
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Date Received
                                             </label>
                                             <div className="flex items-center gap-2">
@@ -866,7 +900,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                     value={dateReceived}
                                                     onChange={handleDateReceivedChange}
                                                     disabled={!isEditable}
-                                                    className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
                                                 <button
                                                     onClick={() => {
@@ -881,9 +915,8 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             </div>
                                             {showCalendar && renderCalendar('received')}
                                         </div>
-
                                         <div className="relative">
-                                            <label className="block text-graphite text-sm font-medium mb-2">
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Deadline
                                             </label>
                                             <div className="flex items-center gap-2">
@@ -893,7 +926,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                     value={deadline}
                                                     onChange={(e) => setDeadline(e.target.value)}
                                                     disabled={!isEditable}
-                                                    className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
                                                 <button
                                                     type="button"
@@ -911,14 +944,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                         </div>
 
                                         <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-medium">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-semibold">
                                                     Victims ({victims.filter(v => v.name.trim() !== '').length})
                                                 </label>
                                                 <button
                                                     onClick={addVictimField}
                                                     disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -926,14 +959,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <div className="space-y-3">
                                                 {victims.map((victim, index) => (
                                                     <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
                                                             <input
                                                                 type="text"
                                                                 placeholder="Name"
                                                                 value={victim.name}
                                                                 onChange={(e) => updateVictimName(index, e.target.value)}
                                                                 disabled={!isEditable}
-                                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                             />
 
                                                             {/* Multi-Select Dropdown for Victims */}
@@ -957,16 +990,16 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                     {victim.sectors.map((sector) => (
                                                                         <span
                                                                             key={sector}
-                                                                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
                                                                         >
                                                                             {sector}
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => toggleVictimSector(index, sector)}
                                                                                 disabled={!isEditable}
-                                                                                className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                                                className="hover:text-blue"
                                                                             >
-                                                                                <XCircle size={14} className="text-blue-600" />
+                                                                                <XCircle size={14} className="text-royal" />
                                                                             </button>
                                                                         </span>
                                                                     ))}
@@ -977,7 +1010,7 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                             <button
                                                                 onClick={() => removeVictim(index)}
                                                                 disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -988,14 +1021,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                         </div>
 
                                         <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-medium">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-semibold">
                                                     Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
                                                 </label>
                                                 <button
                                                     onClick={addStaffField}
                                                     disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -1003,33 +1036,37 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <div className="space-y-3">
                                                 {staff.map((member, index) => (
                                                     <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                                            <select
-                                                                value={member.userId}
-                                                                onChange={(e) => updateStaff(index, e.target.value)}
-                                                                disabled={!isEditable}
-                                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <option value="">Assign the case to...</option>
-                                                                {users.map((user) => (
-                                                                    <option key={user.id} value={user.id}>
-                                                                        {user.first_name} {user.last_name}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                            <div className="relative">
+                                                                <select
+                                                                    value={member.userId}
+                                                                    onChange={(e) => updateStaff(index, e.target.value)}
+                                                                    disabled={!isEditable}
+                                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    style={{ appearance: 'none' }}
+                                                                >
+                                                                    <option value="">Assign the case to...</option>
+                                                                    {users.map((user) => (
+                                                                        <option key={user.id} value={user.id} className='text-black'>
+                                                                            {user.first_name} {user.last_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                            </div>
                                                             <input
                                                                 type="email"
                                                                 value={member.email}
                                                                 readOnly
                                                                 placeholder="Email Address"
-                                                                className="w-full text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
+                                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
                                                             />
                                                         </div>
                                                         {staff.length > 1 && (
                                                             <button
                                                                 onClick={() => removeStaff(index)}
                                                                 disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1042,52 +1079,59 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
 
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-graphite text-sm font-medium mb-2">
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Type of Request
                                             </label>
-                                            <select
-                                                value={typeOfRequest}
-                                                onChange={handleTypeOfRequestChange}
-                                                disabled={!isEditable}
-                                                className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            >
-                                                <option value="">Pick the type of Request...</option>
-                                                {lookups.requestTypes.map((type) => (
-                                                    <option key={type.id} value={type.id}>
-                                                        {type.name}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    value={typeOfRequest}
+                                                    onChange={handleTypeOfRequestChange}
+                                                    disabled={!isEditable}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Type of Request...</option>
+                                                    {lookups.requestTypes.map((type) => (
+                                                        <option key={type.id} value={type.id} className='text-black'>
+                                                            {type.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-graphite text-sm font-medium mb-2">
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Mode of Request
                                             </label>
-                                            <select
-                                                value={modeOfRequest}
-                                                onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                disabled={!isEditable}
-                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            >
-                                                <option value="">Pick the mode...</option>
-                                                {lookups.requestModes.map((mode) => (
-                                                    <option key={mode.id} value={mode.id}>
-                                                        {mode.name}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    value={modeOfRequest}
+                                                    onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                    disabled={!isEditable}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Mode of Request...</option>
+                                                    {lookups.requestModes.map((mode) => (
+                                                        <option key={mode.id} value={mode.id} className='text-black'>
+                                                            {mode.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
                                         </div>
 
                                         <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-medium">
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-semibold">
                                                     Respondents ({respondents.filter(r => r.name.trim() !== '').length})
                                                 </label>
                                                 <button
                                                     onClick={addRespondentField}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -1095,14 +1139,14 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                             <div className="space-y-3">
                                                 {respondents.map((respondent, index) => (
                                                     <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
                                                             <input
                                                                 type="text"
                                                                 placeholder="Name"
                                                                 value={respondent.name}
                                                                 onChange={(e) => updateRespondentName(index, e.target.value)}
                                                                 disabled={!isEditable}
-                                                                className={`w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                             />
 
                                                             {/* Multi-Select Dropdown for Respondents */}
@@ -1126,135 +1170,139 @@ export default function DocketDetailsModal({ isOpen, onClose, docketId, users, l
                                                                     {respondent.sectors.map((sector) => (
                                                                         <span
                                                                             key={sector}
-                                                                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
                                                                         >
                                                                             {sector}
                                                                             <button
                                                                                 type="button"
                                                                                 onClick={() => toggleRespondentSector(index, sector)}
                                                                                 disabled={!isEditable}
-                                                                                className={`hover:text-blue-900 ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                                                className="hover:text-blue"
                                                                             >
-                                                                                <XCircle size={14} className="text-blue-600" />
+                                                                                <XCircle size={14} className="text-royal" />
                                                                             </button>
                                                                         </span>
                                                                     ))}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <button
-                                                            onClick={() => removeRespondent(index)}
-                                                            disabled={!isEditable}
-                                                            className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
+                                                        {respondents.length > 1 && (
+                                                            <button
+                                                                onClick={() => removeRespondent(index)}
+                                                                disabled={!isEditable}
+                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
-
                                     </div>
 
                                     <div className="space-y-4">
                                         <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-medium">
-                                                    Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addCategory}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {categories.map((cat, index) => (
-                                                    <div key={index} className="flex gap-2 items-center">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Enter category..."
-                                                            value={cat}
-                                                            onChange={(e) => updateCategory(index, e.target.value)}
-                                                            disabled={!isEditable}
-                                                            className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        />
-                                                        {categories.length > 1 && (
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Category of Alleged..."
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!categories.includes(newValue)) {
+                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                disabled={!isEditable}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {categories.filter(c => c.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {category}
                                                             <button
-                                                                onClick={() => removeCategory(index)}
+                                                                type="button"
+                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
                                                                 disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="hover:text-blue"
                                                             >
-                                                                <X size={16} />
+                                                                <XCircle size={14} className="text-royal" />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-medium">
-                                                    Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addRight}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {rightsViolated.map((right, index) => (
-                                                    <div key={index} className="flex gap-2 items-center">
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Enter right violated..."
-                                                            value={right}
-                                                            onChange={(e) => updateRight(index, e.target.value)}
-                                                            disabled={!isEditable}
-                                                            className={`flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        />
-                                                        {rightsViolated.length > 1 && (
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Right(s) Violated..."
+                                                disabled={!isEditable}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!rightsViolated.includes(newValue)) {
+                                                            setRightsViolated([...rightsViolated.filter(r => r !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {rightsViolated.filter(r => r.trim() !== '').map((right, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {right}
                                                             <button
-                                                                onClick={() => removeRight(index)}
+                                                                type="button"
+                                                                onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
                                                                 disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                className="hover:text-blue"
                                                             >
-                                                                <X size={16} />
+                                                                <XCircle size={14} className="text-royal" />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-
                                 </div>
-                                <div className="flex justify-between items-center mt-6">
-                                    <div>
-                                        {currentUserRole === 'records_officer' && (
-                                            <button
-                                                onClick={handleDelete}
-                                                disabled={!isEditable}
-                                                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
-                                            >
-                                                Delete Docket
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-4">
+                                <div className="flex justify-end items-center -mt-10 gap-2">
                                         <button
                                             onClick={handleSaveChanges}
                                             className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
                                         >
                                             Save Changes
                                         </button>
-                                    </div>
+                                        {currentUserRole === 'records_officer' && (
+                                            <button
+                                                onClick={handleDelete}
+                                                disabled={!isEditable}
+                                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
                                 </div>
                             </div>
                         )}

@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import DocketTable from './DocketTable';
-import DocketCaseModal from "@/components/DocketCaseModal";
-import DocketDetailsModal from "@/components/DocketDetailsModal";
+import DocketCaseModal from "@/components/DocketNewMotoModal";
+import DocketDetailsModal from "@/components/DocketViewMotoModal";
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';

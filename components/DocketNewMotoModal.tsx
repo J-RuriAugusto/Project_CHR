@@ -5,7 +5,7 @@ import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
 import { validateDocketForm, submitDocketForm } from '@/lib/utils/docket-form-helpers';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 
-interface DocketCaseModalProps {
+interface DocketNewMotoModalProps {
     isOpen: boolean;
     onClose: () => void;
     users: any[];
@@ -61,20 +61,20 @@ const SECTORS = [
     "Children in Street Situations"
 ];
 
-export default function DocketCaseModal({ isOpen, onClose, users, lookups }: DocketCaseModalProps) {
+export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: DocketNewMotoModalProps) {
     const currentYear = new Date().getFullYear();
     const [docketNumber, setDocketNumber] = useState('');
     const [dateReceived, setDateReceived] = useState(new Date().toLocaleDateString('en-US'));
     const [deadline, setDeadline] = useState(new Date().toLocaleDateString('en-US'));
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
-    const [categories, setCategories] = useState<string[]>(['']);
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
-    const [rights, setRights] = useState<string[]>(['']);
+    const [categories, setCategories] = useState<string[]>([]);
+    const [rights, setRights] = useState<string[]>([]);
 
     // Updated state for Victims and Respondents - both support multiple sectors
     // Initialize victims with one empty field
     const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
-    const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([]);
+    const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
 
     // Staff state
     const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
@@ -127,7 +127,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         setModeOfRequest('');
         setRights(['']);
         setVictims([{ name: '', sectors: [] }]);
-        setRespondents([]);
+        setRespondents([{ name: '', sectors: [] }]);
         setStaff([{ userId: '', email: '' }]);
         setShowCalendar(false);
     };
@@ -167,34 +167,50 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
     }, [dateReceived, typeOfRequest]);
 
     // Category Handlers
-    const addCategory = () => setCategories([...categories, '']);
-    const updateCategory = (index: number, value: string) => {
-        const newCategories = [...categories];
-        newCategories[index] = value;
-        setCategories(newCategories);
-    };
-    const removeCategory = (index: number) => {
-        if (categories.length > 1) {
-            setCategories(categories.filter((_, i) => i !== index));
-        }
-    };
+    // const addCategory = () => {
+    //     const lastCategory = categories[categories.length - 1];
+            // Only add if the last category has content
+    //     if (lastCategory && lastCategory.trim() !== '') {
+    //         setCategories([...categories, '']);
+    //     }
+    // };
+    // const updateCategory = (index: number, value: string) => {
+    //     const newCategories = [...categories];
+    //     newCategories[index] = value;
+    //     setCategories(newCategories);
+    // };
+    // const removeCategory = (index: number) => {
+    //     if (categories.length > 1) {
+    //         setCategories(categories.filter((_, i) => i !== index));
+    //     }
+    // };
 
     // Rights Handlers
-    const addRight = () => setRights([...rights, '']);
-    const updateRight = (index: number, value: string) => {
-        const newRights = [...rights];
-        newRights[index] = value;
-        setRights(newRights);
-    };
-    const removeRight = (index: number) => {
-        if (rights.length > 1) {
-            setRights(rights.filter((_, i) => i !== index));
-        }
-    };
+    // const addRight = () => {
+    //     const lastRight = rights[rights.length - 1];
+            // Only add if the last right has content
+    //     if (lastRight && lastRight.trim() !== '') {
+    //         setRights([...rights, '']);
+    //     }
+    // };
+    // const updateRight = (index: number, value: string) => {
+    //     const newRights = [...rights];
+    //     newRights[index] = value;
+    //     setRights(newRights);
+    // };
+    // const removeRight = (index: number) => {
+    //     if (rights.length > 1) {
+    //         setRights(rights.filter((_, i) => i !== index));
+    //     }
+    // };
 
     // Victim Handlers
     const addVictimField = () => {
-        setVictims([...victims, { name: '', sectors: [] }]);
+        const lastVictim = victims[victims.length - 1];
+        // Only add if the last victim has a name
+        if (lastVictim && lastVictim.name.trim() !== '') {
+            setVictims([...victims, { name: '', sectors: [] }]);
+        }
     };
 
     const updateVictimName = (index: number, value: string) => {
@@ -224,7 +240,16 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
     // Respondent Handlers
     const addRespondentField = () => {
-        setRespondents([...respondents, { name: '', sectors: [] }]);
+        // If empty, add first field
+        if (respondents.length === 0) {
+            setRespondents([{ name: '', sectors: [] }]);
+        } else {
+            const lastRespondent = respondents[respondents.length - 1];
+            // Only add if the last respondent has a name
+            if (lastRespondent && lastRespondent.name.trim() !== '') {
+                setRespondents([...respondents, { name: '', sectors: [] }]);
+            }
+        }
     };
 
     const updateRespondentName = (index: number, value: string) => {
@@ -252,7 +277,11 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
     // Staff Handlers
     const addStaffField = () => {
-        setStaff([...staff, { userId: '', email: '' }]);
+        const lastStaff = staff[staff.length - 1];
+        // Only add if the last staff has been assigned
+        if (lastStaff && lastStaff.userId.trim() !== '') {
+            setStaff([...staff, { userId: '', email: '' }]);
+        }
     };
 
     const updateStaff = (index: number, userId: string) => {
@@ -418,7 +447,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
-                        ←
+                        <img src="/icon23.png" alt="Previous" className="w-5 h-5" />
                     </button>
                     <div className="text-center">
                         <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
@@ -435,7 +464,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                         }}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
-                        →
+                        <img src="/icon24.png" alt="Next" className="w-5 h-5" />
                     </button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-2">
@@ -493,13 +522,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                     {/* Search Bar */}
                     <div className="p-2 border-b border-gray-200">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search sectors..."
                                 value={searchValue}
                                 onChange={(e) => onSearch(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         </div>
@@ -517,13 +546,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                         type="checkbox"
                                         checked={selectedSectors.includes(sector)}
                                         onChange={() => onToggleSector(sector)}
-                                        className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        className="mr-2 h-4 w-4 text-black border-royal rounded focus:ring-blue-500"
                                     />
-                                    <span className="text-gray-700">{sector}</span>
+                                    <span className="text-black">{sector}</span>
                                 </label>
                             ))
                         ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">
+                            <div className="px-3 py-2 text-sm text-black">
                                 No sectors found
                             </div>
                         )}
@@ -537,8 +566,8 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
         <div>
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                        <div className="bg-sky p-4 flex justify-between items-center border-b">
+                    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="bg-sky p-4 flex justify-between items-center">
                             <div>
                                 <label className="block text-graphite text-sm font-semibold mb-2">
                                     Docket Number
@@ -560,8 +589,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                 <X size={24} />
                             </button>
                         </div>
-
-                        <div className="p-6 bg-snowWhite">
+                        <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
                             <div className="grid grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-4">
                                     <div className="relative">
@@ -573,7 +601,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                 type="text"
                                                 value={dateReceived || 'Nov 18, 2025'}
                                                 onChange={(e) => setDateReceived(e.target.value)}
-                                                className="flex-1 text-black border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sky"
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                             <button
                                                 onClick={() => {
@@ -597,7 +625,7 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                 type="text"
                                                 value={deadline || 'Feb 24, 2026'}
                                                 onChange={(e) => setDeadline(e.target.value)}
-                                                className="flex-1 text-black border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-sky"
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                             <button
                                                 onClick={() => {
@@ -626,13 +654,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                         <div className="space-y-3">
                                             {victims.map((victim, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
-                                                    <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
                                                         <input
                                                             type="text"
                                                             placeholder="Name"
                                                             value={victim.name}
                                                             onChange={(e) => updateVictimName(index, e.target.value)}
-                                                            className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
 
                                                         {/* Multi-Select Dropdown for Victims */}
@@ -655,15 +683,15 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                                 {victim.sectors.map((sector) => (
                                                                     <span
                                                                         key={sector}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
                                                                     >
                                                                         {sector}
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => toggleVictimSector(index, sector)}
-                                                                            className="hover:text-blue-900"
+                                                                            className="hover:text-blue"
                                                                         >
-                                                                            <XCircle size={14} className="text-blue-600" />
+                                                                            <XCircle size={14} className="text-royal" />
                                                                         </button>
                                                                     </span>
                                                                 ))}
@@ -698,25 +726,29 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                         <div className="space-y-3">
                                             {staff.map((member, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
-                                                    <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                                        <select
-                                                            value={member.userId}
-                                                            onChange={(e) => updateStaff(index, e.target.value)}
-                                                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
-                                                        >
-                                                            <option value="">Assign the case to...</option>
-                                                            {users.map((user) => (
-                                                                <option key={user.id} value={user.id}>
-                                                                    {user.first_name} {user.last_name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <div className="relative">
+                                                            <select
+                                                                value={member.userId}
+                                                                onChange={(e) => updateStaff(index, e.target.value)}
+                                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                style={{ appearance: 'none' }}
+                                                            >
+                                                                <option value="">Assign the case to...</option>
+                                                                {users.map((user) => (
+                                                                    <option key={user.id} value={user.id} className='text-black'>
+                                                                        {user.first_name} {user.last_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                        </div>
                                                         <input
                                                             type="email"
                                                             value={member.email}
                                                             readOnly
                                                             placeholder="Email Address"
-                                                            className="w-full text-gray-500 bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none"
+                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
                                                         />
                                                     </div>
                                                     {staff.length > 1 && (
@@ -738,54 +770,62 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                         <label className="block text-graphite text-sm font-semibold mb-2">
                                             Type of Request
                                         </label>
-                                        <select
-                                            value={typeOfRequest}
-                                            onChange={(e) => {
-                                                const newTypeId = e.target.value ? Number(e.target.value) : '';
-                                                setTypeOfRequest(newTypeId);
+                                        <div className="relative">
+                                            <select
+                                                value={typeOfRequest}
+                                                onChange={(e) => {
+                                                    const newTypeId = e.target.value ? Number(e.target.value) : '';
+                                                    setTypeOfRequest(newTypeId);
 
-                                                // Auto-calculate deadline based on request type
-                                                if (newTypeId && dateReceived) {
-                                                    const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
-                                                    if (selectedType) {
-                                                        const receivedDate = new Date(dateReceived);
-                                                        if (!isNaN(receivedDate.getTime())) {
-                                                            // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
-                                                            const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
-                                                            const deadlineDate = new Date(receivedDate);
-                                                            deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
-                                                            setDeadline(deadlineDate.toLocaleDateString('en-US'));
+                                                    // Auto-calculate deadline based on request type
+                                                    if (newTypeId && dateReceived) {
+                                                        const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
+                                                        if (selectedType) {
+                                                            const receivedDate = new Date(dateReceived);
+                                                            if (!isNaN(receivedDate.getTime())) {
+                                                                // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
+                                                                const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
+                                                                const deadlineDate = new Date(receivedDate);
+                                                                deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+                                                                setDeadline(deadlineDate.toLocaleDateString('en-US'));
+                                                            }
                                                         }
                                                     }
-                                                }
-                                            }}
-                                            className="w-full rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-ash"
-                                        >
-                                            <option value="">Pick the Type of Request...</option>
-                                            {lookups.requestTypes.map((type) => (
-                                                <option key={type.id} value={type.id}>
-                                                    {type.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                                }}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Type of Request...</option>
+                                                {lookups.requestTypes.map((type) => (
+                                                    <option key={type.id} value={type.id} className='text-black'>
+                                                        {type.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
                                     </div>
 
                                     <div>
                                         <label className="block text-graphite text-sm font-semibold mb-2">
                                             Mode of Request
                                         </label>
-                                        <select
-                                            value={modeOfRequest}
-                                            onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                            className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <option value="">Pick the Mode of Request...</option>
-                                            {lookups.requestModes.map((mode) => (
-                                                <option key={mode.id} value={mode.id}>
-                                                    {mode.name}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <div className="relative">
+                                            <select
+                                                value={modeOfRequest}
+                                                onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Mode of Request...</option>
+                                                {lookups.requestModes.map((mode) => (
+                                                    <option key={mode.id} value={mode.id} className='text-black'>
+                                                        {mode.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
                                     </div>
 
                                     <div>
@@ -803,13 +843,13 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                         <div className="space-y-3">
                                             {respondents.map((respondent, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
-                                                    <div className="flex-1 flex flex-col gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
                                                         <input
                                                             type="text"
                                                             placeholder="Name"
                                                             value={respondent.name}
                                                             onChange={(e) => updateRespondentName(index, e.target.value)}
-                                                            className="w-full text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
 
                                                         {/* Multi-Select Dropdown for Respondents */}
@@ -832,27 +872,29 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
                                                                 {respondent.sectors.map((sector) => (
                                                                     <span
                                                                         key={sector}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
                                                                     >
                                                                         {sector}
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => toggleRespondentSector(index, sector)}
-                                                                            className="hover:text-blue-900"
+                                                                            className="hover:text-blue"
                                                                         >
-                                                                            <XCircle size={14} className="text-blue-600" />
+                                                                            <XCircle size={14} className="text-royal" />
                                                                         </button>
                                                                     </span>
                                                                 ))}
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <button
-                                                        onClick={() => removeRespondent(index)}
-                                                        className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
+                                                    {respondents.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeRespondent(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -861,81 +903,92 @@ export default function DocketCaseModal({ isOpen, onClose, users, lookups }: Doc
 
                                 <div className="space-y-4">
                                     <div>
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-semibold">
-                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                            </label>
-                                            <button
-                                                onClick={addCategory}
-                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {categories.map((cat, index) => (
-                                                <div key={index} className="flex gap-2 items-center">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter category..."
-                                                        value={cat}
-                                                        onChange={(e) => updateCategory(index, e.target.value)}
-                                                        className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    />
-                                                    {categories.length > 1 && (
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Category of Alleged..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!categories.includes(newValue)) {
+                                                        setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {/* Display entered categories as chips */}
+                                        {categories.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {category}
                                                         <button
-                                                            onClick={() => removeCategory(index)}
-                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                            type="button"
+                                                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
                                                         >
-                                                            <X size={16} />
+                                                            <XCircle size={14} className="text-royal" />
                                                         </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-
                                     <div>
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-semibold">
-                                                Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
-                                            </label>
-                                            <button
-                                                onClick={addRight}
-                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {rights.map((right, index) => (
-                                                <div key={index} className="flex gap-2 items-center">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Enter right violated..."
-                                                        value={right}
-                                                        onChange={(e) => updateRight(index, e.target.value)}
-                                                        className="flex-1 text-gray-600 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    />
-                                                    {rights.length > 1 && (
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Right(s) Violated..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!rights.includes(newValue)) {
+                                                        setRights([...rights.filter(r => r !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {/* Display entered rights as chips */}
+                                        {rights.filter(r => r.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {rights.filter(r => r.trim() !== '').map((right, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {right}
                                                         <button
-                                                            onClick={() => removeRight(index)}
-                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                            type="button"
+                                                            onClick={() => setRights(rights.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
                                                         >
-                                                            <X size={16} />
+                                                            <XCircle size={14} className="text-royal" />
                                                         </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end p-6 border-t bg-gray-50">
+                            <div className="flex justify-end -mt-8">
                                 <button
                                     onClick={handleSubmit}
-                                    className="bg-blue hover:bg-highlight text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors"
+                                    className="bg-royalAzure hover:bg-highlight text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors"
                                 >
                                     Submit for Docketing
                                 </button>

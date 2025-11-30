@@ -6,8 +6,8 @@ import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus, deleteDockets } from '@/lib/actions/docket-actions';
 import DocketTable from './DocketTable';
-import DocketCaseModal from "@/components/DocketCaseModal";
-import DocketDetailsModal from "@/components/DocketDetailsModal";
+import DocketNewTypeModal from "@/components/DocketNewTypeModal";
+import DocketViewMotoModal from "@/components/DocketViewMotoModal";
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
 
@@ -27,7 +27,6 @@ interface DocketContentProps {
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
     const searchParams = useSearchParams();
     const initialStatus = searchParams.get('status') || 'all';
-
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
@@ -201,6 +200,16 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                 </svg>
                             </div>
 
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="px-4 py-2 bg-blue text-white rounded-md text-sm font-semibold hover:bg-highlight flex items-center gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                Docket New Case
+                            </button>
+
                             {/* MARK AS DROPDOWN */}
                             <div className="relative w-40">
                                 <select
@@ -216,7 +225,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                         }
                                     }}
                                     disabled={isUpdating}
-                                    className="w-full px-6 py-0.5 rounded-full bg-white border border-midnightNavy text-charcoal text-center text-sm font-semibold appearance-none cursor-pointer truncate"
+                                    className="w-full px-4 py-2 rounded-md bg-darkBlue text-white text-center text-sm font-semibold appearance-none cursor-pointer truncate"
                                     defaultValue=""
                                 >
                                     <option value="" disabled hidden>Mark selected as</option>
@@ -224,20 +233,10 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                     <option value="FOR REVIEW">For Review</option>
                                     <option value="COMPLETED">Completed</option>
                                 </select>
-                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                             </div>
-
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="px-4 py-2 bg-blue text-white rounded-md text-sm font-semibold hover:bg-highlight flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Docket New Case
-                            </button>
 
                             {/* DELETE BUTTON */}
                             <button
@@ -247,9 +246,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                 title="Delete Selected"
                                 className="p-2 rounded-md text-sm font-semibold text-white bg-coral hover:bg-red-700 transition-disabled:opacity-50"
                                 >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zM7 7a1 1 0 012 0v7a1 1 0 11-2 0V7zm4 0a1 1 0 012 0v7a1 1 0 11-2 0V7z" clipRule="evenodd" />
-                                </svg>
+                                <img src="/icon21.png" alt="Delete" className="w-4 h-5" />
                             </button>
 
                         </div>
@@ -280,8 +277,8 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 </div>
             </main>
 
-            <DocketCaseModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
-            <DocketDetailsModal
+            <DocketNewTypeModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
+            <DocketViewMotoModal
                 isOpen={isDetailsModalOpen}
                 onClose={handleDetailsModalClose}
                 docketId={selectedDocketId}

@@ -1,0 +1,1088 @@
+"use client";
+
+import { useState, useRef, useEffect } from 'react';
+import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
+import { validateDocketForm, submitDocketForm } from '@/lib/utils/docket-form-helpers';
+import { DocketLookups } from '@/lib/actions/docket-lookups';
+
+interface DocketNewTypeModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    users: any[];
+    lookups: DocketLookups;
+}
+
+const SECTORS = [
+    "Women",
+    "Child",
+    "Child in Conflict with the Law",
+    "Child in Situations of Armed Conflict",
+    "Child Involved in Armed Conflict",
+    "Student",
+    "Student Leader",
+    "Elderly",
+    "Person Living with HIV",
+    "LGBTQIA+",
+    "Farmer",
+    "Fisherfolk",
+    "Military",
+    "Police",
+    "Civil Servant / Government Employee",
+    "Government Official (Elected)",
+    "Government Official (Appointed)",
+    "Media",
+    "Person Deprived of Liberty",
+    "Internally Displaced Person",
+    "Person with Disability",
+    "Person Who Uses Drugs",
+    "Person Suspected of Committing a Crime",
+    "Person Suspected of Terrorism etc",
+    "Activist",
+    "Labor Leader",
+    "Laborer / Worker",
+    "Factory or Plant Worker",
+    "Urban Poor",
+    "Informal Settler",
+    "Leader of CSO / NGO / Cause Oriented Group",
+    "Sectoral Leader",
+    "Religious Leader",
+    "Environmental Protection Advocate",
+    "Indigenous People (Member)",
+    "Teacher",
+    "Bantay Dagat",
+    "Bantay Banwa",
+    "General Public / Private Citizen",
+    "PUJ / PUV Driver",
+    "Mental Health Service User",
+    "Youth",
+    "Street Dweller",
+    "Vendor",
+    "People in Street Situations",
+    "Children in Street Situations"
+];
+
+export default function DocketNewTypeModal({ isOpen, onClose, users, lookups }: DocketNewTypeModalProps) {
+    const currentYear = new Date().getFullYear();
+    const [docketNumber, setDocketNumber] = useState('');
+    const [dateReceived, setDateReceived] = useState(new Date().toLocaleDateString('en-US'));
+    const [deadline, setDeadline] = useState(new Date().toLocaleDateString('en-US'));
+    const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
+    const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
+    const [complainant, setComplainant] = useState<string[]>(['']);
+    const [contact, setContact] = useState<string>('');
+    const [categories, setCategories] = useState<string[]>([]);
+    const [rights, setRights] = useState<string[]>([]);
+
+    // Updated state for Victims and Respondents - both support multiple sectors
+    const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
+    const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
+
+    // Staff state
+    const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [calendarMode, setCalendarMode] = useState<'dateReceived' | 'deadline'>('dateReceived');
+
+    // Sector dropdown state for victims
+    const [openVictimSectorDropdown, setOpenVictimSectorDropdown] = useState<number | null>(null);
+    const [victimSectorSearch, setVictimSectorSearch] = useState('');
+    const victimDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Sector dropdown state for respondents
+    const [openRespondentSectorDropdown, setOpenRespondentSectorDropdown] = useState<number | null>(null);
+    const [respondentSectorSearch, setRespondentSectorSearch] = useState('');
+    const respondentDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (victimDropdownRef.current && !victimDropdownRef.current.contains(event.target as Node)) {
+                setOpenVictimSectorDropdown(null);
+                setVictimSectorSearch('');
+            }
+            if (respondentDropdownRef.current && !respondentDropdownRef.current.contains(event.target as Node)) {
+                setOpenRespondentSectorDropdown(null);
+                setRespondentSectorSearch('');
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Reset form when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            resetForm();
+        }
+    }, [isOpen]);
+
+    const resetForm = () => {
+        setDocketNumber('');
+        setDateReceived(new Date().toLocaleDateString('en-US'));
+        setDeadline(new Date().toLocaleDateString('en-US'));
+        setTypeOfRequest('');
+        setComplainant(['']);
+        setContact('');
+        setCategories(['']);
+        setModeOfRequest('');
+        setRights(['']);
+        setVictims([{ name: '', sectors: [] }]);
+        setRespondents([{ name: '', sectors: [] }]);
+        setStaff([{ userId: '', email: '' }]);
+        setShowCalendar(false);
+    };
+
+    // Calculate deadline based on request type and date received
+    const calculateDeadline = (dateReceivedStr: string, typeId: number | '') => {
+        if (!dateReceivedStr || typeId === '') return;
+
+        const requestType = lookups.requestTypes.find(t => t.id === typeId);
+        if (!requestType) return;
+
+        const receivedDate = new Date(dateReceivedStr);
+        if (isNaN(receivedDate.getTime())) return;
+
+        // Add 1 day to start counting from the next day
+        const startDate = new Date(receivedDate);
+        startDate.setDate(startDate.getDate() + 1);
+
+        let daysToAdd = 0;
+        if (requestType.name === 'Legal Assistance / OPS') {
+            daysToAdd = 120;
+        } else if (requestType.name === 'Legal Investigation') {
+            daysToAdd = 60;
+        } else {
+            return; // Don't autofill for other types
+        }
+
+        const deadlineDate = new Date(startDate);
+        deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+
+        setDeadline(deadlineDate.toLocaleDateString('en-US'));
+    };
+
+    // Effect to trigger calculation when dependencies change
+    useEffect(() => {
+        calculateDeadline(dateReceived, typeOfRequest);
+    }, [dateReceived, typeOfRequest]);
+
+    // Category Handlers
+    // const addCategory = () => {
+    //     const lastCategory = categories[categories.length - 1];
+            // Only add if the last category has content
+    //     if (lastCategory && lastCategory.trim() !== '') {
+    //         setCategories([...categories, '']);
+    //     }
+    // };
+    // const updateCategory = (index: number, value: string) => {
+    //     const newCategories = [...categories];
+    //     newCategories[index] = value;
+    //     setCategories(newCategories);
+    // };
+    // const removeCategory = (index: number) => {
+    //     if (categories.length > 1) {
+    //         setCategories(categories.filter((_, i) => i !== index));
+    //     }
+    // };
+
+    // Rights Handlers
+    // const addRight = () => {
+    //     const lastRight = rights[rights.length - 1];
+            // Only add if the last right has content
+    //     if (lastRight && lastRight.trim() !== '') {
+    //         setRights([...rights, '']);
+    //     }
+    // };
+    // const updateRight = (index: number, value: string) => {
+    //     const newRights = [...rights];
+    //     newRights[index] = value;
+    //     setRights(newRights);
+    // };
+    // const removeRight = (index: number) => {
+    //     if (rights.length > 1) {
+    //         setRights(rights.filter((_, i) => i !== index));
+    //     }
+    // };
+
+    // Victim Handlers
+    const addVictimField = () => {
+        const lastVictim = victims[victims.length - 1];
+        // Only add if the last victim has a name
+        if (lastVictim && lastVictim.name.trim() !== '') {
+            setVictims([...victims, { name: '', sectors: [] }]);
+        }
+    };
+
+    const updateVictimName = (index: number, value: string) => {
+        const newVictims = [...victims];
+        newVictims[index].name = value;
+        setVictims(newVictims);
+    };
+
+    const toggleVictimSector = (victimIndex: number, sector: string) => {
+        const newVictims = [...victims];
+        const sectors = newVictims[victimIndex].sectors;
+
+        if (sectors.includes(sector)) {
+            newVictims[victimIndex].sectors = sectors.filter(s => s !== sector);
+        } else {
+            newVictims[victimIndex].sectors = [...sectors, sector];
+        }
+
+        setVictims(newVictims);
+    };
+
+    const removeVictim = (index: number) => {
+        if (victims.length > 1) {
+            setVictims(victims.filter((_, i) => i !== index));
+        }
+    };
+
+    // Respondent Handlers
+    const addRespondentField = () => {
+        // If empty, add first field
+        if (respondents.length === 0) {
+            setRespondents([{ name: '', sectors: [] }]);
+        } else {
+            const lastRespondent = respondents[respondents.length - 1];
+            // Only add if the last respondent has a name
+            if (lastRespondent && lastRespondent.name.trim() !== '') {
+                setRespondents([...respondents, { name: '', sectors: [] }]);
+            }
+        }
+    };
+
+    const updateRespondentName = (index: number, value: string) => {
+        const newRespondents = [...respondents];
+        newRespondents[index].name = value;
+        setRespondents(newRespondents);
+    };
+
+    const toggleRespondentSector = (respondentIndex: number, sector: string) => {
+        const newRespondents = [...respondents];
+        const sectors = newRespondents[respondentIndex].sectors;
+
+        if (sectors.includes(sector)) {
+            newRespondents[respondentIndex].sectors = sectors.filter(s => s !== sector);
+        } else {
+            newRespondents[respondentIndex].sectors = [...sectors, sector];
+        }
+
+        setRespondents(newRespondents);
+    };
+
+    const removeRespondent = (index: number) => {
+        setRespondents(respondents.filter((_, i) => i !== index));
+    };
+
+    // Staff Handlers
+    const addStaffField = () => {
+        const lastStaff = staff[staff.length - 1];
+        // Only add if the last staff has been assigned
+        if (lastStaff && lastStaff.userId.trim() !== '') {
+            setStaff([...staff, { userId: '', email: '' }]);
+        }
+    };
+
+    const updateStaff = (index: number, userId: string) => {
+        const isAlreadySelected = staff.some((s, i) => i !== index && s.userId === userId);
+
+        if (isAlreadySelected && userId !== '') {
+            alert("This staff member is already assigned.");
+            return;
+        }
+
+        const selectedUser = users.find(u => u.id === userId);
+        const newStaff = [...staff];
+        newStaff[index] = {
+            userId,
+            email: selectedUser ? selectedUser.email : ''
+        };
+        setStaff(newStaff);
+    };
+
+    const removeStaff = (index: number) => {
+        if (staff.length > 1) {
+            setStaff(staff.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleDocketNumberFocus = () => {
+        if (docketNumber === '') {
+            setDocketNumber(`CHR-VII-${currentYear}-`);
+        }
+    };
+
+    const handleDocketNumberBlur = () => {
+        if (docketNumber && docketNumber !== `CHR-VII-${currentYear}-`) {
+            const pattern = new RegExp(`^CHR-VII-${currentYear}-\\d+$`);
+            if (!pattern.test(docketNumber)) {
+                alert('Invalid docket number format. Expected format: CHR-VII-YEAR-NUMBER');
+            }
+        }
+    };
+
+    const handleSubmit = async () => {
+        // Validate form
+        const errors = await validateDocketForm({
+            docketNumber,
+            dateReceived,
+            deadline,
+            typeOfRequest,
+            violationCategory: categories,
+            // name: complainant,
+            // number: contact,
+            modeOfRequest,
+            rightsViolated: rights,
+            victims,
+            respondents,
+            staff
+        });
+        // If there are errors, show them and stop
+        if (Object.keys(errors).length > 0) {
+            const errorMessages = Object.values(errors).join('\n');
+            alert(`Please fix the following errors:\n\n${errorMessages}`);
+            return;
+        }
+        // Submit form
+        const result = await submitDocketForm({
+            docketNumber,
+            dateReceived,
+            deadline,
+            typeOfRequest,
+            violationCategory: categories,
+            // name: complainant,
+            // number: contact,
+            modeOfRequest,
+            rightsViolated: rights,
+            victims,
+            respondents,
+            staff
+        });
+        if (result.success) {
+            alert('Docket submitted successfully!');
+            onClose(); // This will trigger refresh in DocketContent
+        } else {
+            alert(`Error: ${result.message}`);
+        }
+    };
+
+    // Calendar logic
+    const getDaysInMonth = (month: number, year: number): number => {
+        return new Date(year, month + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (month: number, year: number): number => {
+        return new Date(year, month, 1).getDay();
+    };
+
+    const handleDateSelect = (day: number) => {
+        const formattedDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
+
+        if (calendarMode === 'dateReceived') {
+            setDateReceived(formattedDate);
+            setShowCalendar(false);
+        } else if (calendarMode === 'deadline') {
+            setDeadline(formattedDate);
+            setShowCalendar(false);
+        }
+    };
+
+    const isDateReceived = (day: number) => {
+        if (!dateReceived) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
+        return checkDate === dateReceived;
+    };
+
+    const isDeadline = (day: number) => {
+        if (!deadline) return false;
+        const checkDate = new Date(selectedYear, selectedMonth, day).toLocaleDateString('en-US');
+        return checkDate === deadline;
+    };
+
+    const renderCalendar = () => {
+        const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+        const firstDay = getFirstDayOfMonth(selectedMonth, selectedYear);
+        const days = [];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="p-2"></div>);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const isReceivedDate = isDateReceived(day);
+            const isDeadlineDate = isDeadline(day);
+
+            let buttonClass = "w-10 h-10 flex items-center justify-center rounded-full text-sm transition-colors ";
+
+            if (isDeadlineDate) {
+                buttonClass += "bg-blue text-white font-semibold";
+            } else if (isReceivedDate) {
+                buttonClass += "bg-sky text-blue font-semibold";
+            } else {
+                buttonClass += "text-gray-700 hover:bg-sky";
+            }
+
+            days.push(
+                <button
+                    key={day}
+                    onClick={() => handleDateSelect(day)}
+                    className={buttonClass}
+                >
+                    {day}
+                </button>
+            );
+        }
+
+        return (
+            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
+                <div className="flex justify-between items-center mb-4">
+                    <button
+                        onClick={() => {
+                            if (selectedMonth === 0) {
+                                setSelectedMonth(11);
+                                setSelectedYear(selectedYear - 1);
+                            } else {
+                                setSelectedMonth(selectedMonth - 1);
+                            }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        <img src="/icon23.png" alt="Previous" className="w-5 h-5" />
+                    </button>
+                    <div className="text-center">
+                        <div className="font-bold text-lg">{monthNames[selectedMonth]} {selectedYear}</div>
+                        <div className="text-sm text-blue font-semibold">Select Dates</div>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (selectedMonth === 11) {
+                                setSelectedMonth(0);
+                                setSelectedYear(selectedYear + 1);
+                            } else {
+                                setSelectedMonth(selectedMonth + 1);
+                            }
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                    >
+                        <img src="/icon24.png" alt="Next" className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {dayNames.map(dayName => (
+                        <div key={dayName} className="w-10 h-8 flex items-center justify-center text-xs font-semibold text-gray-500">
+                            {dayName}
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {days}
+                </div>
+            </div>
+        );
+    };
+
+    // Filter sectors based on search
+    const filteredVictimSectors = SECTORS.filter(sector =>
+        sector.toLowerCase().includes(victimSectorSearch.toLowerCase())
+    );
+
+    const filteredRespondentSectors = SECTORS.filter(sector =>
+        sector.toLowerCase().includes(respondentSectorSearch.toLowerCase())
+    );
+
+    // Render sector dropdown component
+    const renderSectorDropdown = (
+        type: 'victim' | 'respondent',
+        index: number,
+        selectedSectors: string[],
+        isOpen: boolean,
+        searchValue: string,
+        filteredSectors: string[],
+        onToggle: () => void,
+        onSearch: (value: string) => void,
+        onToggleSector: (sector: string) => void,
+        dropdownRef: React.RefObject<HTMLDivElement>
+    ) => (
+        <div className="relative" ref={isOpen ? dropdownRef : null}>
+            <button
+                type="button"
+                onClick={onToggle}
+                className="w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+            >
+                <span className="truncate">
+                    {selectedSectors.length > 0
+                        ? `${selectedSectors.length} selected`
+                        : 'Pick the Sector...'}
+                </span>
+                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </button>
+
+            {isOpen && (
+                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg">
+                    {/* Search Bar */}
+                    <div className="p-2 border-b">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search sectors..."
+                                value={searchValue}
+                                onChange={(e) => onSearch(e.target.value)}
+                                className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Scrollable Options */}
+                    <div className="max-h-60 overflow-y-auto">
+                        {filteredSectors.length > 0 ? (
+                            filteredSectors.map((sector) => (
+                                <label
+                                    key={sector}
+                                    className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedSectors.includes(sector)}
+                                        onChange={() => onToggleSector(sector)}
+                                        className="mr-2 h-4 w-4 text-black border-royal rounded focus:ring-blue-500"
+                                    />
+                                    <span className="text-black">{sector}</span>
+                                </label>
+                            ))
+                        ) : (
+                            <div className="px-3 py-2 text-sm text-black">
+                                No sectors found
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div>
+            {isOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+                        <div className="bg-sky p-4 flex justify-between items-center">
+                            <div>
+                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                    Docket Number
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="CHR-VII-YEAR-NUMBER"
+                                    value={docketNumber}
+                                    onChange={(e) => setDocketNumber(e.target.value)}
+                                    onFocus={handleDocketNumberFocus}
+                                    onBlur={handleDocketNumberBlur}
+                                    className="bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="text-royal hover:text-blue"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
+                            <div className="grid grid-cols-3 gap-6 mb-6">
+                                <div className="space-y-4">
+                                    <div className="relative">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Date Received
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={dateReceived || 'Nov 18, 2025'}
+                                                onChange={(e) => setDateReceived(e.target.value)}
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setCalendarMode('dateReceived');
+                                                    setShowCalendar(!showCalendar);
+                                                }}
+                                                className="text-royal hover:text-ash"
+                                            >
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                        {showCalendar && renderCalendar()}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Deadline
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={deadline || 'Feb 24, 2026'}
+                                                onChange={(e) => setDeadline(e.target.value)}
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setCalendarMode('deadline');
+                                                    setShowCalendar(!showCalendar);
+                                                }}
+                                                className="text-royal hover:text-ash"
+                                            >
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Name of Complainant ({complainant.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter the Name of Complainant..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!complainant.includes(newValue)) {
+                                                        setComplainant([...complainant.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {/* Display entered complainant s as chips */}
+                                        {/* {complainant.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {complainant.filter(c => c.trim() !== '').map((complainant, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {complainant}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setComplainant(complainant.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )} */}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addStaffField}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {staff.map((member, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <div className="relative">
+                                                            <select
+                                                                value={member.userId}
+                                                                onChange={(e) => updateStaff(index, e.target.value)}
+                                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                style={{ appearance: 'none' }}
+                                                            >
+                                                                <option value="">Assign the case to...</option>
+                                                                {users.map((user) => (
+                                                                    <option key={user.id} value={user.id} className='text-black'>
+                                                                        {user.first_name} {user.last_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                        </div>
+                                                        <input
+                                                            type="email"
+                                                            value={member.email}
+                                                            readOnly
+                                                            placeholder="Email Address"
+                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
+                                                        />
+                                                    </div>
+                                                    {staff.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeStaff(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Type of Request
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={typeOfRequest}
+                                                onChange={(e) => {
+                                                    const newTypeId = e.target.value ? Number(e.target.value) : '';
+                                                    setTypeOfRequest(newTypeId);
+
+                                                    // Auto-calculate deadline based on request type
+                                                    if (newTypeId && dateReceived) {
+                                                        const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
+                                                        if (selectedType) {
+                                                            const receivedDate = new Date(dateReceived);
+                                                            if (!isNaN(receivedDate.getTime())) {
+                                                                // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
+                                                                const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
+                                                                const deadlineDate = new Date(receivedDate);
+                                                                deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+                                                                setDeadline(deadlineDate.toLocaleDateString('en-US'));
+                                                            }
+                                                        }
+                                                    }
+                                                }}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Type of Request...</option>
+                                                {lookups.requestTypes.map((type) => (
+                                                    <option key={type.id} value={type.id} className='text-black'>
+                                                        {type.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Mode of Request
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={modeOfRequest}
+                                                onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Mode of Request...</option>
+                                                {lookups.requestModes.map((mode) => (
+                                                    <option key={mode.id} value={mode.id} className='text-black'>
+                                                        {mode.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        {/* <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Contact Number ({contact.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Complainant's Contact..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!contact.includes(newValue)) {
+                                                        setContact([...contact.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        /> */}
+                                        {/* Display entered contact as chips */}
+                                        {/* {contact.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {contact.filter(c => c.trim() !== '').map((contact, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {contact}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setContact(contact.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )} */}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Victims ({victims.filter(v => v.name.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addVictimField}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {victims.map((victim, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Name"
+                                                            value={victim.name}
+                                                            onChange={(e) => updateVictimName(index, e.target.value)}
+                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+
+                                                        {/* Multi-Select Dropdown for Victims */}
+                                                        {renderSectorDropdown(
+                                                            'victim',
+                                                            index,
+                                                            victim.sectors,
+                                                            openVictimSectorDropdown === index,
+                                                            victimSectorSearch,
+                                                            filteredVictimSectors,
+                                                            () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
+                                                            setVictimSectorSearch,
+                                                            (sector) => toggleVictimSector(index, sector),
+                                                            victimDropdownRef
+                                                        )}
+
+                                                        {/* Selected Sectors Display */}
+                                                        {victim.sectors.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {victim.sectors.map((sector) => (
+                                                                    <span
+                                                                        key={sector}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                                    >
+                                                                        {sector}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleVictimSector(index, sector)}
+                                                                            className="hover:text-blue"
+                                                                        >
+                                                                            <XCircle size={14} className="text-royal" />
+                                                                        </button>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {victims.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeVictim(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Category of Alleged..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!categories.includes(newValue)) {
+                                                        setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {/* Display entered categories as chips */}
+                                        {categories.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {category}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Right(s) Violated..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!rights.includes(newValue)) {
+                                                        setRights([...rights.filter(r => r !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {/* Display entered rights as chips */}
+                                        {rights.filter(r => r.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {rights.filter(r => r.trim() !== '').map((right, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {right}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setRights(rights.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Respondents ({respondents.filter(r => r.name.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addRespondentField}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {respondents.map((respondent, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Name"
+                                                            value={respondent.name}
+                                                            onChange={(e) => updateRespondentName(index, e.target.value)}
+                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+
+                                                        {/* Multi-Select Dropdown for Respondents */}
+                                                        {renderSectorDropdown(
+                                                            'respondent',
+                                                            index,
+                                                            respondent.sectors,
+                                                            openRespondentSectorDropdown === index,
+                                                            respondentSectorSearch,
+                                                            filteredRespondentSectors,
+                                                            () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
+                                                            setRespondentSectorSearch,
+                                                            (sector) => toggleRespondentSector(index, sector),
+                                                            respondentDropdownRef
+                                                        )}
+
+                                                        {/* Selected Sectors Display */}
+                                                        {respondent.sectors.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {respondent.sectors.map((sector) => (
+                                                                    <span
+                                                                        key={sector}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                                    >
+                                                                        {sector}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleRespondentSector(index, sector)}
+                                                                            className="hover:text-blue"
+                                                                        >
+                                                                            <XCircle size={14} className="text-royal" />
+                                                                        </button>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {respondents.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeRespondent(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end -mt-4">
+                                <button
+                                    onClick={handleSubmit}
+                                    className="bg-royalAzure hover:bg-highlight text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors"
+                                >
+                                    Submit for Docketing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
