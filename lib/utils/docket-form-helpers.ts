@@ -18,6 +18,7 @@ interface DocketFormData {
     victims: { name: string; sectors: string[] }[];
     respondents: { name: string; sectors: string[] }[];
     staff: { userId: string; email: string }[];
+    complainants: { name: string; contactNumber: string }[];
 }
 
 export async function validateDocketForm(formData: DocketFormData): Promise<ValidationErrors> {
@@ -113,6 +114,14 @@ export async function validateDocketForm(formData: DocketFormData): Promise<Vali
         errors.staff = 'At least one staff member must be assigned';
     }
 
+    // Complainants validation (optional, but if provided, name is required)
+    const complainantsWithNames = formData.complainants.filter(c => c.name.trim() !== '');
+    // If we want to enforce at least one complainant:
+    // if (complainantsWithNames.length === 0) {
+    //     errors.complainants = 'At least one complainant is required';
+    // }
+
+
     return errors;
 }
 
@@ -145,7 +154,8 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
         rightsViolated: rightsViolated,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),
         respondents: respondentsWithNames.map(r => ({ name: r.name, sectorNames: r.sectors })),
-        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId)
+        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId),
+        complainants: formData.complainants.filter(c => c.name.trim() !== '')
     };
 
     // Submit to database

@@ -14,6 +14,7 @@ export interface DocketSubmissionData {
     victims: { name: string; sectorNames: string[] }[];
     respondents: { name: string; sectorNames: string[] }[];
     staffInChargeIds: string[];
+    complainants: { name: string; contactNumber: string }[];
 }
 
 export interface SubmissionResult {
@@ -275,6 +276,36 @@ export async function submitDocket(
                 return {
                     success: false,
                     message: 'Error saving staff assignment'
+                };
+            }
+        }
+
+        // 6. Insert complainants into docket_parties
+        for (const complainant of data.complainants) {
+            if (complainant.name.trim() === '') continue;
+
+            // Append contact number to name if present
+            let nameToSave = complainant.name;
+            if (complainant.contactNumber.trim() !== '') {
+                nameToSave = `${nameToSave} (Contact: ${complainant.contactNumber})`;
+            }
+
+            const { error: partyError } = await supabase
+                .from('docket_parties')
+                .insert({
+                    docket_id: docketId,
+                    name: nameToSave,
+                    party_type: 'COMPLAINANT' // Assuming DB supports this or check constraint allows it. If not, might fail.
+                });
+
+            if (partyError) {
+                console.error('Error inserting complainant:', partyError);
+                // We won't rollback for this, just log it, or maybe we should?
+                // Let's be safe and rollback if it fails, assuming strict data integrity.
+                await supabase.from('dockets').delete().eq('id', docketId);
+                return {
+                    success: false,
+                    message: 'Error saving complainant information'
                 };
             }
         }

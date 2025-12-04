@@ -6,8 +6,8 @@ import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus, deleteDockets } from '@/lib/actions/docket-actions';
 import DocketTable from './DocketTable';
-import DocketNewTypeModal from "@/components/DocketNewTypeModal";
-import DocketViewMotoModal from "@/components/DocketViewMotoModal";
+import DocketNewCaseModal from "@/components/DocketNewCaseModal";
+import DocketViewModal from "@/components/DocketViewModal";
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
 
@@ -245,7 +245,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                 aria-label="Delete Selected"
                                 title="Delete Selected"
                                 className="p-2 rounded-md text-sm font-semibold text-white bg-coral hover:bg-red-700 transition-disabled:opacity-50"
-                                >
+                            >
                                 <img src="/icon21.png" alt="Delete" className="w-4 h-5" />
                             </button>
 
@@ -277,8 +277,8 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 </div>
             </main>
 
-            <DocketNewTypeModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
-            <DocketViewMotoModal
+            <DocketNewCaseModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
+            <DocketViewModal
                 isOpen={isDetailsModalOpen}
                 onClose={handleDetailsModalClose}
                 docketId={selectedDocketId}

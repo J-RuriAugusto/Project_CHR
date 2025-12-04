@@ -5,7 +5,7 @@ import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
 import { validateDocketForm, submitDocketForm } from '@/lib/utils/docket-form-helpers';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 
-interface DocketNewMotoModalProps {
+interface DocketNewCaseModalProps {
     isOpen: boolean;
     onClose: () => void;
     users: any[];
@@ -61,24 +61,24 @@ const SECTORS = [
     "Children in Street Situations"
 ];
 
-export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: DocketNewMotoModalProps) {
+export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: DocketNewCaseModalProps) {
     const currentYear = new Date().getFullYear();
     const [docketNumber, setDocketNumber] = useState('');
     const [dateReceived, setDateReceived] = useState(new Date().toLocaleDateString('en-US'));
     const [deadline, setDeadline] = useState(new Date().toLocaleDateString('en-US'));
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
+    const [complainants, setComplainants] = useState<{ name: string; contactNumber: string }[]>([{ name: '', contactNumber: '' }]);
+
     const [categories, setCategories] = useState<string[]>([]);
     const [rights, setRights] = useState<string[]>([]);
 
     // Updated state for Victims and Respondents - both support multiple sectors
-    // Initialize victims with one empty field
     const [victims, setVictims] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
     const [respondents, setRespondents] = useState<{ name: string; sectors: string[] }[]>([{ name: '', sectors: [] }]);
 
     // Staff state
     const [staff, setStaff] = useState<{ userId: string; email: string }[]>([{ userId: '', email: '' }]);
-
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -123,6 +123,8 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
         setDateReceived(new Date().toLocaleDateString('en-US'));
         setDeadline(new Date().toLocaleDateString('en-US'));
         setTypeOfRequest('');
+        setComplainants([{ name: '', contactNumber: '' }]);
+
         setCategories(['']);
         setModeOfRequest('');
         setRights(['']);
@@ -169,7 +171,7 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
     // Category Handlers
     // const addCategory = () => {
     //     const lastCategory = categories[categories.length - 1];
-            // Only add if the last category has content
+    // Only add if the last category has content
     //     if (lastCategory && lastCategory.trim() !== '') {
     //         setCategories([...categories, '']);
     //     }
@@ -188,7 +190,7 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
     // Rights Handlers
     // const addRight = () => {
     //     const lastRight = rights[rights.length - 1];
-            // Only add if the last right has content
+    // Only add if the last right has content
     //     if (lastRight && lastRight.trim() !== '') {
     //         setRights([...rights, '']);
     //     }
@@ -203,6 +205,26 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
     //         setRights(rights.filter((_, i) => i !== index));
     //     }
     // };
+
+    // Complainant Handlers
+    const addComplainantField = () => {
+        const lastComplainant = complainants[complainants.length - 1];
+        if (lastComplainant && lastComplainant.name.trim() !== '') {
+            setComplainants([...complainants, { name: '', contactNumber: '' }]);
+        }
+    };
+
+    const updateComplainant = (index: number, field: 'name' | 'contactNumber', value: string) => {
+        const newComplainants = [...complainants];
+        newComplainants[index][field] = value;
+        setComplainants(newComplainants);
+    };
+
+    const removeComplainant = (index: number) => {
+        if (complainants.length > 1) {
+            setComplainants(complainants.filter((_, i) => i !== index));
+        }
+    };
 
     // Victim Handlers
     const addVictimField = () => {
@@ -330,6 +352,8 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
             deadline,
             typeOfRequest,
             violationCategory: categories,
+            complainants,
+
             modeOfRequest,
             rightsViolated: rights,
             victims,
@@ -349,6 +373,7 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
             deadline,
             typeOfRequest,
             violationCategory: categories,
+            complainants,
             modeOfRequest,
             rightsViolated: rights,
             victims,
@@ -518,9 +543,9 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
             </button>
 
             {isOpen && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg">
                     {/* Search Bar */}
-                    <div className="p-2 border-b border-gray-200">
+                    <div className="p-2 border-b">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
                             <input
@@ -566,7 +591,7 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
         <div>
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+                    <div className="rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
                         <div className="bg-sky p-4 flex justify-between items-center">
                             <div>
                                 <label className="block text-graphite text-sm font-semibold mb-2">
@@ -642,66 +667,38 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
-                                                Victims ({victims.filter(v => v.name.trim() !== '').length})
+                                                Name of Complainant ({complainants.filter(c => c.name.trim() !== '').length})
                                             </label>
                                             <button
-                                                onClick={addVictimField}
+                                                onClick={addComplainantField}
                                                 className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                             >
                                                 <Plus size={16} />
                                             </button>
                                         </div>
                                         <div className="space-y-3">
-                                            {victims.map((victim, index) => (
+                                            {complainants.map((comp, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
-                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                    <div className="flex-1 flex flex-col gap-2">
                                                         <input
                                                             type="text"
-                                                            placeholder="Name"
-                                                            value={victim.name}
-                                                            onChange={(e) => updateVictimName(index, e.target.value)}
-                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            placeholder="Name of Complainant"
+                                                            value={comp.name}
+                                                            onChange={(e) => updateComplainant(index, 'name', e.target.value)}
+                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
-
-                                                        {/* Multi-Select Dropdown for Victims */}
-                                                        {renderSectorDropdown(
-                                                            'victim',
-                                                            index,
-                                                            victim.sectors,
-                                                            openVictimSectorDropdown === index,
-                                                            victimSectorSearch,
-                                                            filteredVictimSectors,
-                                                            () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
-                                                            setVictimSectorSearch,
-                                                            (sector) => toggleVictimSector(index, sector),
-                                                            victimDropdownRef
-                                                        )}
-
-                                                        {/* Selected Sectors Display */}
-                                                        {victim.sectors.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                                {victim.sectors.map((sector) => (
-                                                                    <span
-                                                                        key={sector}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                                    >
-                                                                        {sector}
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => toggleVictimSector(index, sector)}
-                                                                            className="hover:text-blue"
-                                                                        >
-                                                                            <XCircle size={14} className="text-royal" />
-                                                                        </button>
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Contact Number"
+                                                            value={comp.contactNumber}
+                                                            onChange={(e) => updateComplainant(index, 'contactNumber', e.target.value)}
+                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
                                                     </div>
-                                                    {victims.length > 1 && (
+                                                    {complainants.length > 1 && (
                                                         <button
-                                                            onClick={() => removeVictim(index)}
-                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                            onClick={() => removeComplainant(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5 mt-2"
                                                         >
                                                             <X size={16} />
                                                         </button>
@@ -829,47 +826,87 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
                                     </div>
 
                                     <div>
+                                        {/* <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Contact Number ({contact.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Complainant's Contact..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!contact.includes(newValue)) {
+                                                        setContact([...contact.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        /> */}
+                                        {/* Display entered contact as chips */}
+                                        {/* {contact.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {contact.filter(c => c.trim() !== '').map((contact, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {contact}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setContact(contact.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )} */}
+                                    </div>
+                                    <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
-                                                Respondents ({respondents.filter(r => r.name.trim() !== '').length})
+                                                Victims ({victims.filter(v => v.name.trim() !== '').length})
                                             </label>
                                             <button
-                                                onClick={addRespondentField}
+                                                onClick={addVictimField}
                                                 className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                             >
                                                 <Plus size={16} />
                                             </button>
                                         </div>
                                         <div className="space-y-3">
-                                            {respondents.map((respondent, index) => (
+                                            {victims.map((victim, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
                                                     <div className="flex-1 flex flex-col gap-2 rounded-lg">
                                                         <input
                                                             type="text"
                                                             placeholder="Name"
-                                                            value={respondent.name}
-                                                            onChange={(e) => updateRespondentName(index, e.target.value)}
+                                                            value={victim.name}
+                                                            onChange={(e) => updateVictimName(index, e.target.value)}
                                                             className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
 
-                                                        {/* Multi-Select Dropdown for Respondents */}
+                                                        {/* Multi-Select Dropdown for Victims */}
                                                         {renderSectorDropdown(
-                                                            'respondent',
+                                                            'victim',
                                                             index,
-                                                            respondent.sectors,
-                                                            openRespondentSectorDropdown === index,
-                                                            respondentSectorSearch,
-                                                            filteredRespondentSectors,
-                                                            () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
-                                                            setRespondentSectorSearch,
-                                                            (sector) => toggleRespondentSector(index, sector),
-                                                            respondentDropdownRef
+                                                            victim.sectors,
+                                                            openVictimSectorDropdown === index,
+                                                            victimSectorSearch,
+                                                            filteredVictimSectors,
+                                                            () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
+                                                            setVictimSectorSearch,
+                                                            (sector) => toggleVictimSector(index, sector),
+                                                            victimDropdownRef
                                                         )}
 
                                                         {/* Selected Sectors Display */}
-                                                        {respondent.sectors.length > 0 && (
+                                                        {victim.sectors.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 mt-1">
-                                                                {respondent.sectors.map((sector) => (
+                                                                {victim.sectors.map((sector) => (
                                                                     <span
                                                                         key={sector}
                                                                         className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
@@ -877,7 +914,7 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
                                                                         {sector}
                                                                         <button
                                                                             type="button"
-                                                                            onClick={() => toggleRespondentSector(index, sector)}
+                                                                            onClick={() => toggleVictimSector(index, sector)}
                                                                             className="hover:text-blue"
                                                                         >
                                                                             <XCircle size={14} className="text-royal" />
@@ -887,9 +924,9 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {respondents.length > 1 && (
+                                                    {victims.length > 1 && (
                                                         <button
-                                                            onClick={() => removeRespondent(index)}
+                                                            onClick={() => removeVictim(index)}
                                                             className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                         >
                                                             <X size={16} />
@@ -982,10 +1019,81 @@ export default function DocketNewMotoModal({ isOpen, onClose, users, lookups }: 
                                             </div>
                                         )}
                                     </div>
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Respondents ({respondents.filter(r => r.name.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addRespondentField}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {respondents.map((respondent, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Name"
+                                                            value={respondent.name}
+                                                            onChange={(e) => updateRespondentName(index, e.target.value)}
+                                                            className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+
+                                                        {/* Multi-Select Dropdown for Respondents */}
+                                                        {renderSectorDropdown(
+                                                            'respondent',
+                                                            index,
+                                                            respondent.sectors,
+                                                            openRespondentSectorDropdown === index,
+                                                            respondentSectorSearch,
+                                                            filteredRespondentSectors,
+                                                            () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
+                                                            setRespondentSectorSearch,
+                                                            (sector) => toggleRespondentSector(index, sector),
+                                                            respondentDropdownRef
+                                                        )}
+
+                                                        {/* Selected Sectors Display */}
+                                                        {respondent.sectors.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {respondent.sectors.map((sector) => (
+                                                                    <span
+                                                                        key={sector}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                                    >
+                                                                        {sector}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleRespondentSector(index, sector)}
+                                                                            className="hover:text-blue"
+                                                                        >
+                                                                            <XCircle size={14} className="text-royal" />
+                                                                        </button>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {respondents.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeRespondent(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end -mt-8">
+                            <div className="flex justify-end -mt-4">
                                 <button
                                     onClick={handleSubmit}
                                     className="bg-royalAzure hover:bg-highlight text-white font-semibold py-2 px-6 rounded-lg shadow-md transition-colors"

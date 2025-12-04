@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import DocketTable from './DocketTable';
-import DocketCaseModal from "@/components/DocketNewMotoModal";
-import DocketDetailsModal from "@/components/DocketViewMotoModal";
+
+import DocketDetailsModal from "@/components/DocketViewModal";
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
@@ -29,7 +29,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const searchParams = useSearchParams();
     const initialStatus = searchParams.get('status') || 'all';
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
+
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
@@ -51,11 +51,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
         setIsLoading(false);
     };
 
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        // Refresh dockets after closing modal (in case a new one was added)
-        fetchDockets();
-    };
+
 
     const handleSelectionChange = (docketId: string) => {
         setSelectedDockets(prev =>
@@ -230,7 +226,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 </div>
             </main>
 
-            <DocketCaseModal isOpen={isModalOpen} onClose={handleModalClose} users={users} lookups={lookups} />
+
             <DocketDetailsModal
                 isOpen={isDetailsModalOpen}
                 onClose={handleDetailsModalClose}

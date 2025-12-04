@@ -7,7 +7,7 @@ import { getDocketDetails, checkDocketNumberExists } from '@/lib/actions/docket-
 import { deleteDockets, updateDocket } from "@/lib/actions/docket-actions";
 import { DocketSubmissionData } from '@/lib/actions/docket-submission';
 
-interface DocketViewMotoModalProps {
+interface DocketViewModalProps {
     isOpen: boolean;
     onClose: () => void;
     docketId: string | null;
@@ -65,7 +65,7 @@ const SECTORS = [
     "Children in Street Situations"
 ];
 
-export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, lookups, currentUserRole }: DocketViewMotoModalProps) {
+export default function DocketViewModal({ isOpen, onClose, docketId, users, lookups, currentUserRole }: DocketViewModalProps) {
     const currentYear = new Date().getFullYear();
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -264,7 +264,7 @@ export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, 
     // Category Handlers
     // const addCategory = () => {
     //     const lastCategory = categories[categories.length - 1];
-            // Only add if the last category has content
+    // Only add if the last category has content
     //     if (lastCategory && lastCategory.trim() !== '') {
     //         setCategories([...categories, '']);
     //     }
@@ -283,7 +283,7 @@ export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, 
     // Rights Handlers
     // const addRight = () => {
     //     const lastRight = rights[rights.length - 1];
-            // Only add if the last right has content
+    // Only add if the last right has content
     //     if (lastRight && lastRight.trim() !== '') {
     //         setRights([...rights, '']);
     //     }
@@ -444,8 +444,8 @@ export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, 
                 deadline,
                 typeOfRequest,
                 categories,
-            //  complainant,
-            //  contact,
+                //  complainant,
+                //  contact,
                 modeOfRequest,
                 rightsViolated,
                 victims,
@@ -866,7 +866,7 @@ export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, 
                                         <option value="For Review">For Review</option>
                                         {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
                                     </select>
-                                </div> 
+                                </div>
                                 <button
                                     onClick={onClose}
                                     className="text-royal hover:text-blue justify-self-end"
@@ -1288,21 +1288,21 @@ export default function DocketViewMotoModal({ isOpen, onClose, docketId, users, 
                                     </div>
                                 </div>
                                 <div className="flex justify-end items-center -mt-10 gap-2">
+                                    <button
+                                        onClick={handleSaveChanges}
+                                        className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                    >
+                                        Save Changes
+                                    </button>
+                                    {currentUserRole === 'records_officer' && (
                                         <button
-                                            onClick={handleSaveChanges}
-                                            className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
+                                            onClick={handleDelete}
+                                            disabled={!isEditable}
+                                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
                                         >
-                                            Save Changes
+                                            Delete
                                         </button>
-                                        {currentUserRole === 'records_officer' && (
-                                            <button
-                                                onClick={handleDelete}
-                                                disabled={!isEditable}
-                                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
-                                            >
-                                                Delete
-                                            </button>
-                                        )}
+                                    )}
                                 </div>
                             </div>
                         )}
