@@ -111,6 +111,26 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Scroll to victim dropdown when opened
+    useEffect(() => {
+        if (openVictimSectorDropdown !== null && victimDropdownRef.current) {
+            // Small delay to allow render to update layout
+            setTimeout(() => {
+                victimDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [openVictimSectorDropdown]);
+
+    // Scroll to respondent dropdown when opened
+    useEffect(() => {
+        if (openRespondentSectorDropdown !== null && respondentDropdownRef.current) {
+            // Small delay to allow render to update layout
+            setTimeout(() => {
+                respondentDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [openRespondentSectorDropdown]);
+
     // Reset form when modal opens
     useEffect(() => {
         if (isOpen) {
@@ -359,7 +379,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             victims,
             respondents,
             staff
-        });
+        }, lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio');
         // If there are errors, show them and stop
         if (Object.keys(errors).length > 0) {
             const errorMessages = Object.values(errors).join('\n');
@@ -543,7 +563,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             </button>
 
             {isOpen && (
-                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg">
+                <div className="relative w-full mt-1 bg-white rounded-lg shadow-lg">
                     {/* Search Bar */}
                     <div className="p-2 border-b">
                         <div className="relative">
@@ -615,55 +635,221 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                             </button>
                         </div>
                         <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
-                            <div className="grid grid-cols-3 gap-6 mb-6">
-                                <div className="space-y-4">
-                                    <div className="relative">
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Date Received
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                value={dateReceived || 'Nov 18, 2025'}
-                                                onChange={(e) => setDateReceived(e.target.value)}
-                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    setCalendarMode('dateReceived');
-                                                    setShowCalendar(!showCalendar);
-                                                }}
-                                                className="text-royal hover:text-ash"
-                                            >
-                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
-                                            </button>
+                            <div className="flex flex-col gap-6 mb-6">
+                                {/* Row 1: Dates, Request Types, Categories/Rights */}
+                                <div className="grid grid-cols-3 gap-6">
+                                    {/* Col 1: Dates */}
+                                    <div className="space-y-4">
+                                        <div className="relative">
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Date Received
+                                            </label>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={dateReceived || ''}
+                                                    placeholder='mm/dd/yyyy'
+                                                    onChange={(e) => setDateReceived(e.target.value)}
+                                                    className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        setCalendarMode('dateReceived');
+                                                        setShowCalendar(!showCalendar);
+                                                    }}
+                                                    className="text-royal hover:text-ash"
+                                                >
+                                                    <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                            {showCalendar && renderCalendar()}
                                         </div>
-                                        {showCalendar && renderCalendar()}
+
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Deadline
+                                            </label>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder='mm/dd/yyyy'
+                                                    value={deadline || ''}
+                                                    onChange={(e) => setDeadline(e.target.value)}
+                                                    className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        setCalendarMode('deadline');
+                                                        setShowCalendar(!showCalendar);
+                                                    }}
+                                                    className="text-royal hover:text-ash"
+                                                >
+                                                    <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Deadline
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="text"
-                                                value={deadline || 'Feb 24, 2026'}
-                                                onChange={(e) => setDeadline(e.target.value)}
-                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            <button
-                                                onClick={() => {
-                                                    setCalendarMode('deadline');
-                                                    setShowCalendar(!showCalendar);
-                                                }}
-                                                className="text-royal hover:text-ash"
-                                            >
-                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
-                                            </button>
+                                    {/* Col 2: Request Types */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Type of Request
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={typeOfRequest}
+                                                    onChange={(e) => {
+                                                        const newTypeId = e.target.value ? Number(e.target.value) : '';
+                                                        setTypeOfRequest(newTypeId);
+
+                                                        // Auto-calculate deadline based on request type
+                                                        if (newTypeId && dateReceived) {
+                                                            const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
+                                                            if (selectedType) {
+                                                                const receivedDate = new Date(dateReceived);
+                                                                if (!isNaN(receivedDate.getTime())) {
+                                                                    // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
+                                                                    const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
+                                                                    const deadlineDate = new Date(receivedDate);
+                                                                    deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+                                                                    setDeadline(deadlineDate.toLocaleDateString('en-US'));
+                                                                }
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Type of Request...</option>
+                                                    {lookups.requestTypes.map((type) => (
+                                                        <option key={type.id} value={type.id} className='text-black'>
+                                                            {type.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Mode of Request
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={modeOfRequest}
+                                                    onChange={(e) => {
+                                                        const newModeId = e.target.value ? Number(e.target.value) : '';
+                                                        setModeOfRequest(newModeId);
+
+                                                        // Check if Motu Proprio
+                                                        const selectedMode = lookups.requestModes.find(m => m.id === newModeId);
+                                                        if (selectedMode?.name === 'Motu Proprio') {
+                                                            setComplainants([{ name: '', contactNumber: '' }]);
+                                                        }
+                                                    }}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Mode of Request...</option>
+                                                    {lookups.requestModes.map((mode) => (
+                                                        <option key={mode.id} value={mode.id} className='text-black'>
+                                                            {mode.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
                                         </div>
                                     </div>
 
+                                    {/* Col 3: Categories/Rights */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Category of Alleged..."
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!categories.includes(newValue)) {
+                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {categories.filter(c => c.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {category}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                                className="hover:text-blue"
+                                                            >
+                                                                <XCircle size={14} className="text-royal" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Right(s) Violated..."
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!rights.includes(newValue)) {
+                                                            setRights([...rights.filter(r => r !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {rights.filter(r => r.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {rights.filter(r => r.trim() !== '').map((right, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {right}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setRights(rights.filter((_, i) => i !== index))}
+                                                                className="hover:text-blue"
+                                                            >
+                                                                <XCircle size={14} className="text-royal" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 2: People (Complainants, Victims, Respondents) */}
+                                <div className="grid grid-cols-3 gap-6 items-start">
+                                    {/* Complainants */}
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
@@ -671,7 +857,8 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                             </label>
                                             <button
                                                 onClick={addComplainantField}
-                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                disabled={lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <Plus size={16} />
                                             </button>
@@ -685,14 +872,16 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                                             placeholder="Name of Complainant"
                                                             value={comp.name}
                                                             onChange={(e) => updateComplainant(index, 'name', e.target.value)}
-                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            disabled={lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                            className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio' ? 'bg-gray-100' : ''}`}
                                                         />
                                                         <input
                                                             type="text"
                                                             placeholder="Contact Number"
                                                             value={comp.contactNumber}
                                                             onChange={(e) => updateComplainant(index, 'contactNumber', e.target.value)}
-                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            disabled={lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                            className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio' ? 'bg-gray-100' : ''}`}
                                                         />
                                                     </div>
                                                     {complainants.length > 1 && (
@@ -708,163 +897,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <label className="block text-graphite text-sm font-semibold">
-                                                Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
-                                            </label>
-                                            <button
-                                                onClick={addStaffField}
-                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {staff.map((member, index) => (
-                                                <div key={index} className="flex gap-2 items-start">
-                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                        <div className="relative">
-                                                            <select
-                                                                value={member.userId}
-                                                                onChange={(e) => updateStaff(index, e.target.value)}
-                                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                style={{ appearance: 'none' }}
-                                                            >
-                                                                <option value="">Assign the case to...</option>
-                                                                {users.map((user) => (
-                                                                    <option key={user.id} value={user.id} className='text-black'>
-                                                                        {user.first_name} {user.last_name}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                                        </div>
-                                                        <input
-                                                            type="email"
-                                                            value={member.email}
-                                                            readOnly
-                                                            placeholder="Email Address"
-                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    {staff.length > 1 && (
-                                                        <button
-                                                            onClick={() => removeStaff(index)}
-                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Type of Request
-                                        </label>
-                                        <div className="relative">
-                                            <select
-                                                value={typeOfRequest}
-                                                onChange={(e) => {
-                                                    const newTypeId = e.target.value ? Number(e.target.value) : '';
-                                                    setTypeOfRequest(newTypeId);
-
-                                                    // Auto-calculate deadline based on request type
-                                                    if (newTypeId && dateReceived) {
-                                                        const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
-                                                        if (selectedType) {
-                                                            const receivedDate = new Date(dateReceived);
-                                                            if (!isNaN(receivedDate.getTime())) {
-                                                                // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
-                                                                const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
-                                                                const deadlineDate = new Date(receivedDate);
-                                                                deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
-                                                                setDeadline(deadlineDate.toLocaleDateString('en-US'));
-                                                            }
-                                                        }
-                                                    }
-                                                }}
-                                                style={{ appearance: 'none' }}
-                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="">Pick the Type of Request...</option>
-                                                {lookups.requestTypes.map((type) => (
-                                                    <option key={type.id} value={type.id} className='text-black'>
-                                                        {type.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Mode of Request
-                                        </label>
-                                        <div className="relative">
-                                            <select
-                                                value={modeOfRequest}
-                                                onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                style={{ appearance: 'none' }}
-                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="">Pick the Mode of Request...</option>
-                                                {lookups.requestModes.map((mode) => (
-                                                    <option key={mode.id} value={mode.id} className='text-black'>
-                                                        {mode.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        {/* <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Contact Number ({contact.filter(c => c.trim() !== '').length})
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter Complainant's Contact..."
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                    e.preventDefault();
-                                                    const newValue = e.currentTarget.value.trim();
-                                                    if (!contact.includes(newValue)) {
-                                                        setContact([...contact.filter(c => c !== ''), newValue]);
-                                                    }
-                                                    e.currentTarget.value = '';
-                                                }
-                                            }}
-                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        /> */}
-                                        {/* Display entered contact as chips */}
-                                        {/* {contact.filter(c => c.trim() !== '').length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {contact.filter(c => c.trim() !== '').map((contact, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                    >
-                                                        {contact}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setContact(contact.filter((_, i) => i !== index))}
-                                                            className="hover:text-blue"
-                                                        >
-                                                            <XCircle size={14} className="text-royal" />
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )} */}
-                                    </div>
+                                    {/* Victims */}
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
@@ -936,89 +969,8 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                             ))}
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter Category of Alleged..."
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                    e.preventDefault();
-                                                    const newValue = e.currentTarget.value.trim();
-                                                    if (!categories.includes(newValue)) {
-                                                        setCategories([...categories.filter(c => c !== ''), newValue]);
-                                                    }
-                                                    e.currentTarget.value = '';
-                                                }
-                                            }}
-                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        {/* Display entered categories as chips */}
-                                        {categories.filter(c => c.trim() !== '').length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {categories.filter(c => c.trim() !== '').map((category, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                    >
-                                                        {category}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                                                            className="hover:text-blue"
-                                                        >
-                                                            <XCircle size={14} className="text-royal" />
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-graphite text-sm font-semibold mb-2">
-                                            Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Enter Right(s) Violated..."
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                    e.preventDefault();
-                                                    const newValue = e.currentTarget.value.trim();
-                                                    if (!rights.includes(newValue)) {
-                                                        setRights([...rights.filter(r => r !== ''), newValue]);
-                                                    }
-                                                    e.currentTarget.value = '';
-                                                }
-                                            }}
-                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        {/* Display entered rights as chips */}
-                                        {rights.filter(r => r.trim() !== '').length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {rights.filter(r => r.trim() !== '').map((right, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                    >
-                                                        {right}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setRights(rights.filter((_, i) => i !== index))}
-                                                            className="hover:text-blue"
-                                                        >
-                                                            <XCircle size={14} className="text-royal" />
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                                    {/* Respondents */}
                                     <div>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <label className="block text-graphite text-sm font-semibold">
@@ -1081,6 +1033,62 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                                     {respondents.length > 1 && (
                                                         <button
                                                             onClick={() => removeRespondent(index)}
+                                                            className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 3: Staff */}
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <label className="block text-graphite text-sm font-semibold">
+                                                Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
+                                            </label>
+                                            <button
+                                                onClick={addStaffField}
+                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {staff.map((member, index) => (
+                                                <div key={index} className="flex gap-2 items-start">
+                                                    <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                        <div className="relative">
+                                                            <select
+                                                                value={member.userId}
+                                                                onChange={(e) => updateStaff(index, e.target.value)}
+                                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                style={{ appearance: 'none' }}
+                                                            >
+                                                                <option value="">Assign the case to...</option>
+                                                                {users.map((user) => (
+                                                                    <option key={user.id} value={user.id} className='text-black'>
+                                                                        {user.first_name} {user.last_name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                        </div>
+                                                        <input
+                                                            type="email"
+                                                            value={member.email}
+                                                            readOnly
+                                                            placeholder="Email Address"
+                                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
+                                                        />
+                                                    </div>
+                                                    {staff.length > 1 && (
+                                                        <button
+                                                            onClick={() => removeStaff(index)}
                                                             className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                         >
                                                             <X size={16} />

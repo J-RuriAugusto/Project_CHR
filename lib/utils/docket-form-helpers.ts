@@ -21,7 +21,7 @@ interface DocketFormData {
     complainants: { name: string; contactNumber: string }[];
 }
 
-export async function validateDocketForm(formData: DocketFormData): Promise<ValidationErrors> {
+export async function validateDocketForm(formData: DocketFormData, isMotuProprio: boolean = false): Promise<ValidationErrors> {
     const errors: ValidationErrors = {};
 
     // Docket number validation
@@ -114,13 +114,21 @@ export async function validateDocketForm(formData: DocketFormData): Promise<Vali
         errors.staff = 'At least one staff member must be assigned';
     }
 
-    // Complainants validation (optional, but if provided, name is required)
-    const complainantsWithNames = formData.complainants.filter(c => c.name.trim() !== '');
-    // If we want to enforce at least one complainant:
-    // if (complainantsWithNames.length === 0) {
-    //     errors.complainants = 'At least one complainant is required';
-    // }
+    // Complainants validation
+    if (!isMotuProprio) {
+        // Filter out completely empty rows (both name and contact are empty)
+        const nonEmptyComplainants = formData.complainants.filter(c => c.name.trim() !== '' || c.contactNumber.trim() !== '');
 
+        if (nonEmptyComplainants.length === 0) {
+            errors.complainants = 'At least one complainant is required for this mode of request.';
+        } else {
+            // Check if any non-empty row is incomplete
+            const incompleteComplainants = nonEmptyComplainants.filter(c => c.name.trim() === '' || c.contactNumber.trim() === '');
+            if (incompleteComplainants.length > 0) {
+                errors.complainants = 'Complainant details must be complete (Name and Contact Number).';
+            }
+        }
+    }
 
     return errors;
 }
@@ -154,8 +162,7 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
         rightsViolated: rightsViolated,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),
         respondents: respondentsWithNames.map(r => ({ name: r.name, sectorNames: r.sectors })),
-        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId),
-        complainants: formData.complainants.filter(c => c.name.trim() !== '')
+        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId)
     };
 
     // Submit to database

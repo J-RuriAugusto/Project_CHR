@@ -571,6 +571,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 violationCategory: categories.join(','),
                 // name: complainant.join(','),
                 // number: contact.join(','),
+                complainants: [], // TODO: Implement complainant editing in DocketViewModal to prevent data loss on update
                 modeOfRequestId: Number(modeOfRequest),
                 rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
