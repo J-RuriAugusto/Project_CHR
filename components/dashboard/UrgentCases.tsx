@@ -1,12 +1,33 @@
+"use client";
+
 import Link from 'next/link';
+import { useState } from 'react';
+import DocketViewModal from '../DocketViewModal';
+import { DocketLookups } from '@/lib/actions/docket-lookups';
 
 interface UrgentCasesProps {
     dueThisWeek: any[];
     dueLastWeek: any[];
     basePath: string; // e.g., '/dashboard/records_officer/docket'
+    users: any[];
+    lookups: DocketLookups;
+    currentUserRole: string;
 }
 
-export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath }: UrgentCasesProps) {
+export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users, lookups, currentUserRole }: UrgentCasesProps) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
+
+    const handleViewCase = (docketId: string) => {
+        setSelectedDocketId(docketId);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedDocketId(null);
+    };
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return {
@@ -81,10 +102,10 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath }: Urge
                         {getStatusBadge(docket.deadline, docket.status)}
                     </div>
                 </div>
-                <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer">
-                    <Link href={`${basePath}?id=${docket.id}`} className="text-white text-xs font-semibold w-full h-full flex items-center justify-center">
+                <div className="bg-royalBlue w-24 flex items-center justify-center hover:bg-highlight cursor-pointer" onClick={() => handleViewCase(docket.id)}>
+                    <button className="text-white text-xs font-semibold w-full h-full flex items-center justify-center">
                         VIEW CASE
-                    </Link>
+                    </button>
                 </div>
             </div>
         );
@@ -120,6 +141,15 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath }: Urge
                     <p className="text-sm text-gray-500 italic">No cases due last week.</p>
                 )}
             </div>
+
+            <DocketViewModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                docketId={selectedDocketId}
+                users={users}
+                lookups={lookups}
+                currentUserRole={currentUserRole}
+            />
         </div>
     );
 }

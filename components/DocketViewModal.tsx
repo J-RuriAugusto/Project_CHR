@@ -807,7 +807,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 type="button"
                 onClick={onToggle}
                 disabled={disabled}
-                className="w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
+                className={`w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
@@ -879,8 +879,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                     onChange={(e) => setDocketNumber(e.target.value)}
                                     onFocus={handleDocketNumberFocus}
                                     onBlur={handleDocketNumberBlur}
-                                    disabled={!isEditable}
-                                    className={`bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                    className={`bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 />
                             </div>
                             <div className="flex items-center gap-6">
@@ -960,16 +960,16 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                     placeholder="mm/dd/yyyy"
                                                     value={dateReceived}
                                                     onChange={handleDateReceivedChange}
-                                                    disabled={!isEditable}
-                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 />
                                                 <button
                                                     onClick={() => {
                                                         setShowCalendar(!showCalendar);
                                                         setShowDeadlineCalendar(false);
                                                     }}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                                    className={`text-royal hover:text-ash ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Calendar size={20} />
                                                 </button>
@@ -988,7 +988,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                     onChange={handleTypeOfRequestChange}
                                                     disabled={!isEditable}
                                                     style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Pick the Type of Request...</option>
                                                     {lookups.requestTypes.map((type) => (
@@ -1020,7 +1020,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                     }
                                                 }}
                                                 disabled={!isEditable}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             />
                                             {categories.filter(c => c.trim() !== '').length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-2">
@@ -1034,7 +1034,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 type="button"
                                                                 onClick={() => setCategories(categories.filter((_, i) => i !== index))}
                                                                 disabled={!isEditable}
-                                                                className="hover:text-blue"
+                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                             >
                                                                 <XCircle size={14} className="text-royal" />
                                                             </button>
@@ -1087,7 +1087,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                     onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
                                                     disabled={!isEditable}
                                                     style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <option value="">Pick the Mode of Request...</option>
                                                     {lookups.requestModes.map((mode) => (
@@ -1119,7 +1119,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                         e.currentTarget.value = '';
                                                     }
                                                 }}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             />
                                             {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-2">
@@ -1133,7 +1133,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 type="button"
                                                                 onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
                                                                 disabled={!isEditable}
-                                                                className="hover:text-blue"
+                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                             >
                                                                 <XCircle size={14} className="text-royal" />
                                                             </button>
@@ -1170,7 +1170,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 value={comp.name}
                                                                 onChange={(e) => updateComplainant(index, 'name', e.target.value)}
                                                                 disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100' : ''}`}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                             />
                                                             <input
                                                                 type="text"
@@ -1178,14 +1178,14 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 value={comp.contactNumber}
                                                                 onChange={(e) => updateComplainant(index, 'contactNumber', e.target.value)}
                                                                 disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100' : ''}`}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                             />
                                                         </div>
                                                         {complainants.length > 1 && (
                                                             <button
                                                                 onClick={() => removeComplainant(index)}
                                                                 disabled={!isEditable}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5 mt-2"
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 mt-2 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1204,7 +1204,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 <button
                                                     onClick={addVictimField}
                                                     disabled={!isEditable}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -1219,7 +1219,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 value={victim.name}
                                                                 onChange={(e) => updateVictimName(index, e.target.value)}
                                                                 disabled={!isEditable}
-                                                                className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             />
 
                                                             {/* Multi-Select Dropdown for Victims */}
@@ -1250,7 +1250,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                                 type="button"
                                                                                 onClick={() => toggleVictimSector(index, sector)}
                                                                                 disabled={!isEditable}
-                                                                                className="hover:text-blue"
+                                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                             >
                                                                                 <XCircle size={14} className="text-royal" />
                                                                             </button>
@@ -1263,7 +1263,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                             <button
                                                                 onClick={() => removeVictim(index)}
                                                                 disabled={!isEditable}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1281,7 +1281,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 </label>
                                                 <button
                                                     onClick={addRespondentField}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    disabled={!isEditable}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -1296,7 +1297,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                 value={respondent.name}
                                                                 onChange={(e) => updateRespondentName(index, e.target.value)}
                                                                 disabled={!isEditable}
-                                                                className="w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             />
 
                                                             {/* Multi-Select Dropdown for Respondents */}
@@ -1327,7 +1328,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                                 type="button"
                                                                                 onClick={() => toggleRespondentSector(index, sector)}
                                                                                 disabled={!isEditable}
-                                                                                className="hover:text-blue"
+                                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                             >
                                                                                 <XCircle size={14} className="text-royal" />
                                                                             </button>
@@ -1340,7 +1341,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                             <button
                                                                 onClick={() => removeRespondent(index)}
                                                                 disabled={!isEditable}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1361,7 +1362,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 <button
                                                     onClick={addStaffField}
                                                     disabled={!isEditable}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -1375,7 +1376,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                     value={member.userId}
                                                                     onChange={(e) => updateStaff(index, e.target.value)}
                                                                     disabled={!isEditable}
-                                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                     style={{ appearance: 'none' }}
                                                                 >
                                                                     <option value="">Assign the case to...</option>
@@ -1399,7 +1400,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                             <button
                                                                 onClick={() => removeStaff(index)}
                                                                 disabled={!isEditable}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1421,7 +1422,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                         <button
                                             onClick={handleDelete}
                                             disabled={!isEditable}
-                                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                            className={`bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             Delete
                                         </button>

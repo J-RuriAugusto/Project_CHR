@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
 import { getDashboardStats, getUrgentCases } from '@/lib/actions/dashboard-stats';
 import UrgentCases from '@/components/dashboard/UrgentCases';
+import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
 
 export default async function OfficerDashboard() {
     const supabase = await createClient();
@@ -33,6 +34,13 @@ export default async function OfficerDashboard() {
     }
 
     const stats = await getDashboardStats(userData.id);
+    const lookups = await getAllDocketLookups();
+
+    // Fetch all users for the staff dropdown
+    const { data: allUsers } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, role')
+        .eq('role', 'officer');
     const urgentCases = await getUrgentCases(userData.id);
 
     return (
@@ -159,6 +167,9 @@ export default async function OfficerDashboard() {
                         <div className="flex flex-col lg:flex-row justify-between">
                             {/* LEFT SIDE - Pending Approvals / Review */}
                             <UrgentCases
+                                users={allUsers || []}
+                                lookups={lookups}
+                                currentUserRole={userData.role}
                                 dueThisWeek={urgentCases.dueThisWeek}
                                 dueLastWeek={urgentCases.dueLastWeek}
                                 basePath="/dashboard/officer/docket"
