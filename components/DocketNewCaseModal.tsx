@@ -637,213 +637,215 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                         <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
                             <div className="flex flex-col gap-6 mb-6">
                                 {/* Row 1: Dates, Request Types, Categories/Rights */}
+                                {/* Row 1: Date Received, Type of Request, Category */}
                                 <div className="grid grid-cols-3 gap-6">
-                                    {/* Col 1: Dates */}
-                                    <div className="space-y-4">
-                                        <div className="relative">
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Date Received
-                                            </label>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={dateReceived || ''}
-                                                    placeholder='mm/dd/yyyy'
-                                                    onChange={(e) => setDateReceived(e.target.value)}
-                                                    className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                />
-                                                <button
-                                                    onClick={() => {
-                                                        setCalendarMode('dateReceived');
-                                                        setShowCalendar(!showCalendar);
-                                                    }}
-                                                    className="text-royal hover:text-ash"
-                                                >
-                                                    <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                            {showCalendar && renderCalendar()}
+                                    {/* Date Received */}
+                                    <div className="relative">
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Date Received
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={dateReceived || ''}
+                                                placeholder='mm/dd/yyyy'
+                                                onChange={(e) => setDateReceived(e.target.value)}
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setCalendarMode('dateReceived');
+                                                    setShowCalendar(!showCalendar);
+                                                }}
+                                                className="text-royal hover:text-ash"
+                                            >
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                            </button>
                                         </div>
-
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Deadline
-                                            </label>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder='mm/dd/yyyy'
-                                                    value={deadline || ''}
-                                                    onChange={(e) => setDeadline(e.target.value)}
-                                                    className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                />
-                                                <button
-                                                    onClick={() => {
-                                                        setCalendarMode('deadline');
-                                                        setShowCalendar(!showCalendar);
-                                                    }}
-                                                    className="text-royal hover:text-ash"
-                                                >
-                                                    <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        {showCalendar && renderCalendar()}
                                     </div>
 
-                                    {/* Col 2: Request Types */}
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Type of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={typeOfRequest}
-                                                    onChange={(e) => {
-                                                        const newTypeId = e.target.value ? Number(e.target.value) : '';
-                                                        setTypeOfRequest(newTypeId);
+                                    {/* Type of Request */}
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Type of Request
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={typeOfRequest}
+                                                onChange={(e) => {
+                                                    const newTypeId = e.target.value ? Number(e.target.value) : '';
+                                                    setTypeOfRequest(newTypeId);
 
-                                                        // Auto-calculate deadline based on request type
-                                                        if (newTypeId && dateReceived) {
-                                                            const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
-                                                            if (selectedType) {
-                                                                const receivedDate = new Date(dateReceived);
-                                                                if (!isNaN(receivedDate.getTime())) {
-                                                                    // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
-                                                                    const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
-                                                                    const deadlineDate = new Date(receivedDate);
-                                                                    deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
-                                                                    setDeadline(deadlineDate.toLocaleDateString('en-US'));
-                                                                }
+                                                    // Auto-calculate deadline based on request type
+                                                    if (newTypeId && dateReceived) {
+                                                        const selectedType = lookups.requestTypes.find(t => t.id === newTypeId);
+                                                        if (selectedType) {
+                                                            const receivedDate = new Date(dateReceived);
+                                                            if (!isNaN(receivedDate.getTime())) {
+                                                                // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
+                                                                const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
+                                                                const deadlineDate = new Date(receivedDate);
+                                                                deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+                                                                setDeadline(deadlineDate.toLocaleDateString('en-US'));
                                                             }
                                                         }
-                                                    }}
-                                                    style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="">Pick the Type of Request...</option>
-                                                    {lookups.requestTypes.map((type) => (
-                                                        <option key={type.id} value={type.id} className='text-black'>
-                                                            {type.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Mode of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={modeOfRequest}
-                                                    onChange={(e) => {
-                                                        const newModeId = e.target.value ? Number(e.target.value) : '';
-                                                        setModeOfRequest(newModeId);
-
-                                                        // Check if Motu Proprio
-                                                        const selectedMode = lookups.requestModes.find(m => m.id === newModeId);
-                                                        if (selectedMode?.name === 'Motu Proprio') {
-                                                            setComplainants([{ name: '', contactNumber: '' }]);
-                                                        }
-                                                    }}
-                                                    style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="">Pick the Mode of Request...</option>
-                                                    {lookups.requestModes.map((mode) => (
-                                                        <option key={mode.id} value={mode.id} className='text-black'>
-                                                            {mode.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
+                                                    }
+                                                }}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Type of Request...</option>
+                                                {lookups.requestTypes.map((type) => (
+                                                    <option key={type.id} value={type.id} className='text-black'>
+                                                        {type.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
                                     </div>
 
-                                    {/* Col 3: Categories/Rights */}
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                            </label>
+                                    {/* Category */}
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Category of Alleged..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!categories.includes(newValue)) {
+                                                        setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                    }
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {categories.filter(c => c.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {category}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
+                                                        >
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Deadline, Mode of Request, Rights */}
+                                <div className="grid grid-cols-3 gap-6">
+                                    {/* Deadline */}
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Deadline
+                                        </label>
+                                        <div className="flex items-center gap-2">
                                             <input
                                                 type="text"
-                                                placeholder="Enter Category of Alleged..."
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!categories.includes(newValue)) {
-                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
-                                                        }
-                                                        e.currentTarget.value = '';
+                                                placeholder='mm/dd/yyyy'
+                                                value={deadline || ''}
+                                                onChange={(e) => setDeadline(e.target.value)}
+                                                className="flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setCalendarMode('deadline');
+                                                    setShowCalendar(!showCalendar);
+                                                }}
+                                                className="text-royal hover:text-ash"
+                                            >
+                                                <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Mode of Request */}
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Mode of Request
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={modeOfRequest}
+                                                onChange={(e) => {
+                                                    const newModeId = e.target.value ? Number(e.target.value) : '';
+                                                    setModeOfRequest(newModeId);
+
+                                                    // Check if Motu Proprio
+                                                    const selectedMode = lookups.requestModes.find(m => m.id === newModeId);
+                                                    if (selectedMode?.name === 'Motu Proprio') {
+                                                        setComplainants([{ name: '', contactNumber: '' }]);
                                                     }
                                                 }}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            {categories.filter(c => c.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                        >
-                                                            {category}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                                                                className="hover:text-blue"
-                                                            >
-                                                                <XCircle size={14} className="text-royal" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                style={{ appearance: 'none' }}
+                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Pick the Mode of Request...</option>
+                                                {lookups.requestModes.map((mode) => (
+                                                    <option key={mode.id} value={mode.id} className='text-black'>
+                                                        {mode.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Right(s) Violated..."
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!rights.includes(newValue)) {
-                                                            setRights([...rights.filter(r => r !== ''), newValue]);
-                                                        }
-                                                        e.currentTarget.value = '';
+                                    </div>
+
+                                    {/* Rights */}
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-2">
+                                            Right(s) Violated ({rights.filter(r => r.trim() !== '').length})
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Right(s) Violated..."
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                    e.preventDefault();
+                                                    const newValue = e.currentTarget.value.trim();
+                                                    if (!rights.includes(newValue)) {
+                                                        setRights([...rights.filter(r => r !== ''), newValue]);
                                                     }
-                                                }}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            {rights.filter(r => r.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {rights.filter(r => r.trim() !== '').map((right, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                            className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        {rights.filter(r => r.trim() !== '').length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {rights.filter(r => r.trim() !== '').map((right, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                    >
+                                                        {right}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setRights(rights.filter((_, i) => i !== index))}
+                                                            className="hover:text-blue"
                                                         >
-                                                            {right}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setRights(rights.filter((_, i) => i !== index))}
-                                                                className="hover:text-blue"
-                                                            >
-                                                                <XCircle size={14} className="text-royal" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                                            <XCircle size={14} className="text-royal" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

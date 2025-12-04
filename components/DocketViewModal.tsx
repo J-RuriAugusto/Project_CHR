@@ -75,8 +75,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const [deadline, setDeadline] = useState('');
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
     const [categories, setCategories] = useState<string[]>(['']);
-    const [complainant, setComplainant] = useState<string[]>(['']);
-    const [contact, setContact] = useState<string>('');
+    const [complainants, setComplainants] = useState<{ name: string; contactNumber: string }[]>([{ name: '', contactNumber: '' }]);
     const [modeOfRequest, setModeOfRequest] = useState<number | ''>('');
     const [rightsViolated, setRightsViolated] = useState<string[]>(['']);
     const [status, setStatus] = useState<string>('Pending');
@@ -186,7 +185,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                     victims: details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }],
                     respondents: details.respondents.length > 0 ? details.respondents : [],
                     staff: details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }],
-                    status: currentStatus
+                    status: currentStatus,
+                    complainants: [{ name: '', contactNumber: '' }]
                 });
             }
         } catch (error) {
@@ -202,8 +202,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         setDateReceived('');
         setDeadline('');
         setTypeOfRequest('');
-        setComplainant(['']);
-        setContact('');
+        setTypeOfRequest('');
+        setComplainants([{ name: '', contactNumber: '' }]);
         setCategories(['']);
         setModeOfRequest('');
         setRightsViolated(['']);
@@ -296,6 +296,26 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const removeRight = (index: number) => {
         if (rightsViolated.length > 1) {
             setRightsViolated(rightsViolated.filter((_, i) => i !== index));
+        }
+    };
+
+    // Complainant Handlers
+    const addComplainantField = () => {
+        const lastComplainant = complainants[complainants.length - 1];
+        if (lastComplainant && lastComplainant.name.trim() !== '') {
+            setComplainants([...complainants, { name: '', contactNumber: '' }]);
+        }
+    };
+
+    const updateComplainant = (index: number, field: 'name' | 'contactNumber', value: string) => {
+        const newComplainants = [...complainants];
+        newComplainants[index][field] = value;
+        setComplainants(newComplainants);
+    };
+
+    const removeComplainant = (index: number) => {
+        if (complainants.length > 1) {
+            setComplainants(complainants.filter((_, i) => i !== index));
         }
     };
 
@@ -444,8 +464,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 deadline,
                 typeOfRequest,
                 categories,
-                //  complainant,
-                //  contact,
+                complainants,
                 modeOfRequest,
                 rightsViolated,
                 victims,
@@ -555,6 +574,23 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
             errors.push('At least one Staff in Charge must be assigned');
         }
 
+        // 9. Validate Complainants (Required unless Motu Proprio)
+        const motuProprioMode = lookups.requestModes.find(m => m.name === 'Motu Proprio');
+        const isMotuProprio = modeOfRequest === motuProprioMode?.id;
+
+        const validComplainants = complainants.filter(c => c.name.trim() !== '');
+
+        if (!isMotuProprio && validComplainants.length === 0) {
+            errors.push('At least one Complainant is required');
+        }
+
+        // Check contact number for each valid complainant
+        validComplainants.forEach((c) => {
+            if (!c.contactNumber.trim()) {
+                errors.push(`Contact number for complainant "${c.name}" is required`);
+            }
+        });
+
         // Show results
         if (errors.length > 0) {
             alert('Please fix the following errors:\n\n' + errors.map((err, i) => `${i + 1}. ${err}`).join('\n'));
@@ -569,9 +605,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 deadline,
                 typeOfRequestId: Number(typeOfRequest),
                 violationCategory: categories.join(','),
-                // name: complainant.join(','),
-                // number: contact.join(','),
-                complainants: [], // TODO: Implement complainant editing in DocketViewModal to prevent data loss on update
+                complainants: complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
                 modeOfRequestId: Number(modeOfRequest),
                 rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
@@ -850,9 +884,33 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                 />
                             </div>
                             <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2">
-                                    <img src="/icon22.png" alt="Time" className="w-6 h-6" />
-                                    <span className="text-deepNavy text-xl font-semibold">102 days</span>
+                                <div>
+                                    <label className="block text-graphite text-sm font-semibold mb-1">
+                                        Days till deadline
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <img src="/icon22.png" alt="Time" className="w-6 h-6" />
+                                        <span className="text-deepNavy text-xl font-semibold">
+                                            {(() => {
+                                                if (!deadline) return 'N/A';
+                                                const [month, day, year] = deadline.split('/').map(Number);
+                                                if (!month || !day || !year) return 'N/A';
+
+                                                const deadlineDate = new Date(year, month - 1, day);
+                                                const today = new Date();
+                                                today.setHours(0, 0, 0, 0);
+
+                                                const diffTime = deadlineDate.getTime() - today.getTime();
+                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                                if (isNaN(diffDays)) return 'N/A';
+
+                                                const absDays = Math.abs(diffDays);
+                                                const dayString = absDays === 1 ? 'day' : 'days';
+                                                return `${diffDays} ${dayString}`;
+                                            })()}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-graphite text-sm font-semibold mb-1">
@@ -888,8 +946,10 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                         Non-pending status cannot be edited. Please change the status to Pending to make changes.
                                     </div>
                                 )}
-                                <div className="grid grid-cols-3 gap-6 mb-6">
-                                    <div className="space-y-4">
+                                <div className="flex flex-col gap-6 mb-6">
+                                    {/* Row 1: Date Received, Type of Request, Category */}
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {/* Date Received */}
                                         <div className="relative">
                                             <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Date Received
@@ -916,6 +976,78 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                             </div>
                                             {showCalendar && renderCalendar('received')}
                                         </div>
+
+                                        {/* Type of Request */}
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Type of Request
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={typeOfRequest}
+                                                    onChange={handleTypeOfRequestChange}
+                                                    disabled={!isEditable}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Type of Request...</option>
+                                                    {lookups.requestTypes.map((type) => (
+                                                        <option key={type.id} value={type.id} className='text-black'>
+                                                            {type.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        {/* Category */}
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Category of Alleged..."
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!categories.includes(newValue)) {
+                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                disabled={!isEditable}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {categories.filter(c => c.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {category}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                                disabled={!isEditable}
+                                                                className="hover:text-blue"
+                                                            >
+                                                                <XCircle size={14} className="text-royal" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Row 2: Deadline, Mode of Request, Rights */}
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {/* Deadline */}
                                         <div className="relative">
                                             <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Deadline
@@ -944,6 +1076,126 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                             {showDeadlineCalendar && renderCalendar('deadline')}
                                         </div>
 
+                                        {/* Mode of Request */}
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Mode of Request
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    value={modeOfRequest}
+                                                    onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                    disabled={!isEditable}
+                                                    style={{ appearance: 'none' }}
+                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Pick the Mode of Request...</option>
+                                                    {lookups.requestModes.map((mode) => (
+                                                        <option key={mode.id} value={mode.id} className='text-black'>
+                                                            {mode.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        {/* Rights */}
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-2">
+                                                Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter Right(s) Violated..."
+                                                disabled={!isEditable}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                        e.preventDefault();
+                                                        const newValue = e.currentTarget.value.trim();
+                                                        if (!rightsViolated.includes(newValue)) {
+                                                            setRightsViolated([...rightsViolated.filter(r => r !== ''), newValue]);
+                                                        }
+                                                        e.currentTarget.value = '';
+                                                    }
+                                                }}
+                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {rightsViolated.filter(r => r.trim() !== '').map((right, index) => (
+                                                        <span
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                        >
+                                                            {right}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
+                                                                disabled={!isEditable}
+                                                                className="hover:text-blue"
+                                                            >
+                                                                <XCircle size={14} className="text-royal" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Row 2: People (Complainants, Victims, Respondents) */}
+                                    <div className="grid grid-cols-3 gap-6 items-start">
+                                        {/* Complainants */}
+                                        <div>
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-semibold">
+                                                    Name of Complainant ({complainants.filter(c => c.name.trim() !== '').length})
+                                                </label>
+                                                <button
+                                                    onClick={addComplainantField}
+                                                    disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {complainants.map((comp, index) => (
+                                                    <div key={index} className="flex gap-2 items-start">
+                                                        <div className="flex-1 flex flex-col gap-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Name of Complainant"
+                                                                value={comp.name}
+                                                                onChange={(e) => updateComplainant(index, 'name', e.target.value)}
+                                                                disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100' : ''}`}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Contact Number"
+                                                                value={comp.contactNumber}
+                                                                onChange={(e) => updateComplainant(index, 'contactNumber', e.target.value)}
+                                                                disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100' : ''}`}
+                                                            />
+                                                        </div>
+                                                        {complainants.length > 1 && (
+                                                            <button
+                                                                onClick={() => removeComplainant(index)}
+                                                                disabled={!isEditable}
+                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5 mt-2"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Victims */}
                                         <div>
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <label className="block text-graphite text-sm font-semibold">
@@ -1021,110 +1273,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-semibold">
-                                                    Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addStaffField}
-                                                    disabled={!isEditable}
-                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {staff.map((member, index) => (
-                                                    <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                            <div className="relative">
-                                                                <select
-                                                                    value={member.userId}
-                                                                    onChange={(e) => updateStaff(index, e.target.value)}
-                                                                    disabled={!isEditable}
-                                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                    style={{ appearance: 'none' }}
-                                                                >
-                                                                    <option value="">Assign the case to...</option>
-                                                                    {users.map((user) => (
-                                                                        <option key={user.id} value={user.id} className='text-black'>
-                                                                            {user.first_name} {user.last_name}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                                            </div>
-                                                            <input
-                                                                type="email"
-                                                                value={member.email}
-                                                                readOnly
-                                                                placeholder="Email Address"
-                                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
-                                                            />
-                                                        </div>
-                                                        {staff.length > 1 && (
-                                                            <button
-                                                                onClick={() => removeStaff(index)}
-                                                                disabled={!isEditable}
-                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Type of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={typeOfRequest}
-                                                    onChange={handleTypeOfRequestChange}
-                                                    disabled={!isEditable}
-                                                    style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="">Pick the Type of Request...</option>
-                                                    {lookups.requestTypes.map((type) => (
-                                                        <option key={type.id} value={type.id} className='text-black'>
-                                                            {type.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Mode of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={modeOfRequest}
-                                                    onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                    disabled={!isEditable}
-                                                    style={{ appearance: 'none' }}
-                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                >
-                                                    <option value="">Pick the Mode of Request...</option>
-                                                    {lookups.requestModes.map((mode) => (
-                                                        <option key={mode.id} value={mode.id} className='text-black'>
-                                                            {mode.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
-                                        </div>
-
+                                        {/* Respondents */}
                                         <div>
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <label className="block text-graphite text-sm font-semibold">
@@ -1202,89 +1351,62 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    {/* Row 3: Staff */}
+                                    <div className="grid grid-cols-3 gap-6">
                                         <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Category of Alleged..."
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!categories.includes(newValue)) {
-                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
-                                                        }
-                                                        e.currentTarget.value = '';
-                                                    }
-                                                }}
-                                                disabled={!isEditable}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            {categories.filter(c => c.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                        >
-                                                            {category}
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <label className="block text-graphite text-sm font-semibold">
+                                                    Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
+                                                </label>
+                                                <button
+                                                    onClick={addStaffField}
+                                                    disabled={!isEditable}
+                                                    className="text-royal hover:text-ash border border-royal rounded p-0.5"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                            <div className="space-y-3">
+                                                {staff.map((member, index) => (
+                                                    <div key={index} className="flex gap-2 items-start">
+                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                            <div className="relative">
+                                                                <select
+                                                                    value={member.userId}
+                                                                    onChange={(e) => updateStaff(index, e.target.value)}
+                                                                    disabled={!isEditable}
+                                                                    className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    style={{ appearance: 'none' }}
+                                                                >
+                                                                    <option value="">Assign the case to...</option>
+                                                                    {users.map((user) => (
+                                                                        <option key={user.id} value={user.id} className='text-black'>
+                                                                            {user.first_name} {user.last_name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                            </div>
+                                                            <input
+                                                                type="email"
+                                                                value={member.email}
+                                                                readOnly
+                                                                placeholder="Email Address"
+                                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
+                                                            />
+                                                        </div>
+                                                        {staff.length > 1 && (
                                                             <button
-                                                                type="button"
-                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
+                                                                onClick={() => removeStaff(index)}
                                                                 disabled={!isEditable}
-                                                                className="hover:text-blue"
+                                                                className="text-royal hover:text-ash border border-royal rounded p-0.5"
                                                             >
-                                                                <XCircle size={14} className="text-royal" />
+                                                                <X size={16} />
                                                             </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Right(s) Violated..."
-                                                disabled={!isEditable}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!rightsViolated.includes(newValue)) {
-                                                            setRightsViolated([...rightsViolated.filter(r => r !== ''), newValue]);
-                                                        }
-                                                        e.currentTarget.value = '';
-                                                    }
-                                                }}
-                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                            {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {rightsViolated.filter(r => r.trim() !== '').map((right, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                        >
-                                                            {right}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
-                                                                disabled={!isEditable}
-                                                                className="hover:text-blue"
-                                                            >
-                                                                <XCircle size={14} className="text-royal" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
