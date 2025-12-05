@@ -76,7 +76,8 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
 
     const renderCard = (docket: any) => {
         const { day, month } = formatDate(docket.deadline);
-        const requestType = docket.request_types?.name === 'Legal Assistance / OPS' ? 'LEGAL ASST.' : 'INVESTIGATION';
+        const requestTypeName = docket.request_types?.name || 'INVESTIGATION';
+        const requestType = requestTypeName === 'Legal Assistance / OPS' ? 'LEGAL ASST.' : 'INVESTIGATION';
         const typeColorClass = requestType === 'INVESTIGATION'
             ? 'border border-royalAzure text-royalAzure'
             : 'border border-oceanBlue text-oceanBlue';
@@ -90,13 +91,13 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
 
                 <div className="flex-1 p-3 flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-bold text-charcoalGray">
+                        <p className="text-sm font-bold text-charcoalGray truncate w-32 xl:w-40" title={`Case ${docket.docket_number}`}>
                             Case {docket.docket_number}
                         </p>
                     </div>
 
                     <div className="flex items-center space-x-2">
-                        <span className={`text-xs px-3 py-1 w-[110px] flex justify-center items-center font-semibold rounded-full ${typeColorClass}`}>
+                        <span className={`text-[10px] px-2 py-0.5 w-[90px] flex justify-center items-center font-semibold rounded-full ${typeColorClass} whitespace-nowrap`}>
                             {requestType}
                         </span>
                         {getStatusBadge(docket.deadline, docket.status)}
@@ -111,35 +112,58 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
         );
     };
 
+    // --- Dynamic Limit Logic ---
+    // Target: 4 for This Week, 3 for Last Week. (Total 7)
+    // If one is short, the other takes the space.
+
+    const countThis = dueThisWeek.length;
+    const countLast = dueLastWeek.length;
+
+    const limitThis = 4 + Math.max(0, 3 - countLast);
+    const limitLast = 3 + Math.max(0, 4 - countThis);
+
+    // Approximate height of one card item including margin (mb-3 = 0.75rem ~ 12px)
+    // We remove the fixed height to let content dictate size.
+    // Reducing estimate to 4rem based on visual feedback that 5rem allowed too many items.
+    const CARD_FULL_HEIGHT_REM = 4;
+
     return (
         <div className="flex-1 pr-0 lg:pr-6 flex flex-col h-full">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h2 className="text-base text-midnightNavy font-semibold">
                     Urgent Cases
                 </h2>
-                <Link href={basePath} className="text-sm text-slateGray font-semibold">
+                <Link href={`${basePath}?status=Urgent`} className="text-sm text-slateGray font-semibold">
                     View All
                 </Link>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            <div className="flex-1 overflow-hidden flex flex-col">
                 {/* This Week */}
-                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">
-                    Due This Week ({dueThisWeek.length} {dueThisWeek.length === 1 ? 'case' : 'cases'})
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 flex-shrink-0">
+                    Due This Week ({countThis} {countThis === 1 ? 'case' : 'cases'})
                 </h3>
-                <div className="space-y-3 mb-6">
+
+                <div
+                    className="overflow-y-auto custom-scrollbar pr-2 mb-4"
+                    style={{ maxHeight: `${limitThis * CARD_FULL_HEIGHT_REM}rem` }}
+                >
                     {dueThisWeek.length > 0 ? (
                         dueThisWeek.map(renderCard)
                     ) : (
-                        <p className="text-sm text-gray-500 italic">No cases due this week.</p>
+                        <p className="text-sm text-gray-500 italic mb-3">No cases due this week.</p>
                     )}
                 </div>
 
                 {/* Last Week */}
-                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">
-                    Due Last Week ({dueLastWeek.length} {dueLastWeek.length === 1 ? 'case' : 'cases'})
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 flex-shrink-0">
+                    Due Last Week ({countLast} {countLast === 1 ? 'case' : 'cases'})
                 </h3>
-                <div className="space-y-3">
+
+                <div
+                    className="overflow-y-auto custom-scrollbar pr-2"
+                    style={{ maxHeight: `${limitLast * CARD_FULL_HEIGHT_REM}rem` }}
+                >
                     {dueLastWeek.length > 0 ? (
                         dueLastWeek.map(renderCard)
                     ) : (
