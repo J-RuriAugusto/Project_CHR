@@ -124,7 +124,9 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                 {/* This Week */}
-                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">Due This Week</h3>
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">
+                    Due This Week ({dueThisWeek.length} {dueThisWeek.length === 1 ? 'case' : 'cases'})
+                </h3>
                 <div className="space-y-3 mb-6">
                     {dueThisWeek.length > 0 ? (
                         dueThisWeek.map(renderCard)
@@ -134,7 +136,9 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
                 </div>
 
                 {/* Last Week */}
-                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">Due Last Week</h3>
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">
+                    Due Last Week ({dueLastWeek.length} {dueLastWeek.length === 1 ? 'case' : 'cases'})
+                </h3>
                 <div className="space-y-3">
                     {dueLastWeek.length > 0 ? (
                         dueLastWeek.map(renderCard)

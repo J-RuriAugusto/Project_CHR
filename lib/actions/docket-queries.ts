@@ -236,6 +236,7 @@ export async function getDocketDetails(id: string) {
         victims,
         respondents,
         staff: staff.length > 0 ? staff : [{ userId: '', email: '' }],
-        status: docket.status || 'PENDING'
+        status: docket.status || 'PENDING',
+        updatedAt: new Date(docket.updated_at).toLocaleDateString('en-US')
     };
 }

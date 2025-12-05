@@ -95,6 +95,12 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const basePath = `/dashboard/${userData.role}`;
     const currentPath = usePathname() || "/";
 
+    const filteredDockets = dockets.filter(docket => {
+        const statusMatch = filterStatus === 'all' || docket.status === filterStatus;
+        const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
+        return statusMatch && typeMatch;
+    });
+
     return (
         <div className="h-screen flex bg-gray-50">
             {/* LEFT COLUMN */}
@@ -128,7 +134,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 <div className="mt-6">
                     {/* Controls Bar */}
                     <div className="flex items-center justify-between mb-4 px-6">
-                        <h2 className="text-xl font-bold text-midnightNavy">Recent</h2>
+                        <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredDockets.length}</h2>
                         <div className="flex items-center gap-3">
                             {/* STATUS FILTER */}
                             <div className="relative w-32">
@@ -210,11 +216,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                         ) : (
                             <div className="overflow-hidden mx-6">
                                 <DocketTable
-                                    dockets={dockets.filter(docket => {
-                                        const statusMatch = filterStatus === 'all' || docket.status === filterStatus;
-                                        const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
-                                        return statusMatch && typeMatch;
-                                    })}
+                                    dockets={filteredDockets}
                                     selectedDockets={selectedDockets}
                                     onSelectionChange={handleSelectionChange}
                                     onSelectAll={handleSelectAll}

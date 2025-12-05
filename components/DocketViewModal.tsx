@@ -73,6 +73,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const [docketNumber, setDocketNumber] = useState('');
     const [dateReceived, setDateReceived] = useState('');
     const [deadline, setDeadline] = useState('');
+    const [updatedAt, setUpdatedAt] = useState('');
     const [typeOfRequest, setTypeOfRequest] = useState<number | ''>('');
     const [categories, setCategories] = useState<string[]>(['']);
     const [complainants, setComplainants] = useState<{ name: string; contactNumber: string }[]>([{ name: '', contactNumber: '' }]);
@@ -141,6 +142,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 setDocketNumber(details.docketNumber);
                 setDateReceived(details.dateReceived);
                 setDeadline(details.deadline);
+                setUpdatedAt(details.updatedAt);
                 setTypeOfRequest(details.typeOfRequestId);
 
                 // Handle categories (split by comma if it's a string, or use as is)
@@ -200,7 +202,9 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         setOriginalDocketNumber('');
         setDocketNumber('');
         setDateReceived('');
+        setDateReceived('');
         setDeadline('');
+        setUpdatedAt('');
         setTypeOfRequest('');
         setTypeOfRequest('');
         setComplainants([{ name: '', contactNumber: '' }]);
@@ -884,32 +888,43 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                 />
                             </div>
                             <div className="flex items-center gap-6">
-                                <div>
+                                <div className="flex flex-col items-center">
                                     <label className="block text-graphite text-sm font-semibold mb-1">
-                                        Days till deadline
+                                        {status === 'Completed' ? 'Date Completed' : 'Days till deadline'}
                                     </label>
                                     <div className="flex items-center gap-2">
-                                        <img src="/icon22.png" alt="Time" className="w-6 h-6" />
-                                        <span className="text-deepNavy text-xl font-semibold">
-                                            {(() => {
-                                                if (!deadline) return 'N/A';
-                                                const [month, day, year] = deadline.split('/').map(Number);
-                                                if (!month || !day || !year) return 'N/A';
+                                        {status === 'Completed' ? (
+                                            <>
+                                                <Calendar className="w-6 h-6 text-deepNavy" />
+                                                <span className="text-deepNavy text-xl font-semibold">
+                                                    {updatedAt || 'N/A'}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <img src="/icon22.png" alt="Time" className="w-6 h-6" />
+                                                <span className="text-deepNavy text-xl font-semibold">
+                                                    {(() => {
+                                                        if (!deadline) return 'N/A';
+                                                        const [month, day, year] = deadline.split('/').map(Number);
+                                                        if (!month || !day || !year) return 'N/A';
 
-                                                const deadlineDate = new Date(year, month - 1, day);
-                                                const today = new Date();
-                                                today.setHours(0, 0, 0, 0);
+                                                        const deadlineDate = new Date(year, month - 1, day);
+                                                        const today = new Date();
+                                                        today.setHours(0, 0, 0, 0);
 
-                                                const diffTime = deadlineDate.getTime() - today.getTime();
-                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                        const diffTime = deadlineDate.getTime() - today.getTime();
+                                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                                                if (isNaN(diffDays)) return 'N/A';
+                                                        if (isNaN(diffDays)) return 'N/A';
 
-                                                const absDays = Math.abs(diffDays);
-                                                const dayString = absDays === 1 ? 'day' : 'days';
-                                                return `${diffDays} ${dayString}`;
-                                            })()}
-                                        </span>
+                                                        const absDays = Math.abs(diffDays);
+                                                        const dayString = absDays === 1 ? 'day' : 'days';
+                                                        return `${diffDays} ${dayString}`;
+                                                    })()}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
@@ -1431,8 +1446,9 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                             </div>
                         )}
                     </div>
-                </div>
-            )}
-        </div>
+                </div >
+            )
+            }
+        </div >
     );
 }
