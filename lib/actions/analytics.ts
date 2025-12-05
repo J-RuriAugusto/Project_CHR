@@ -81,7 +81,7 @@ export async function getCaseAgeingOverview(officerId?: string): Promise<CaseAge
     let query = supabase
         .from('dockets')
         .select(`
-            created_at
+            date_received
             ${officerId ? ', docket_staff!inner(user_id)' : ''}
         `)
         .eq('status', 'PENDING');
@@ -112,8 +112,13 @@ export async function getCaseAgeingOverview(officerId?: string): Promise<CaseAge
 
     // Process dockets
     dockets.forEach((docket: any) => {
-        const createdAt = new Date(docket.created_at);
-        const diffTime = Math.abs(now.getTime() - createdAt.getTime());
+        // Use date_received for accurate case ageing (not created_at)
+        const dateReceived = new Date(docket.date_received);
+
+        // Handle invalid dates just in case
+        if (isNaN(dateReceived.getTime())) return;
+
+        const diffTime = Math.abs(now.getTime() - dateReceived.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays <= 30) {
