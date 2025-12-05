@@ -99,6 +99,26 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             updatePayload.status = status;
         }
 
+        // Check if switching to Motu Proprio
+        const { data: motuProprioMode } = await supabase
+            .from('request_modes')
+            .select('id')
+            .eq('name', 'Motu Proprio')
+            .single();
+
+        if (motuProprioMode && data.modeOfRequestId === motuProprioMode.id) {
+            // If switching to Motu Proprio, delete complainants first to avoid constraint violation
+            const { error: preDeleteComplainantsError } = await supabase
+                .from('docket_complainants')
+                .delete()
+                .eq('docket_id', docketId);
+
+            if (preDeleteComplainantsError) {
+                console.error('Error deleting existing complainants (pre-update):', preDeleteComplainantsError);
+                return { success: false, error: 'Failed to clear complainants for Motu Proprio update' };
+            }
+        }
+
         const { error: docketError } = await supabase
             .from('dockets')
             .update(updatePayload)
@@ -117,7 +137,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
 
         if (deleteRightsError) {
             console.error('Error deleting existing rights:', deleteRightsError);
-            return { success: false, error: 'Failed to update rights' };
+            return { success: false, error: 'Failed to update rights: ' + deleteRightsError.message };
         }
 
         if (data.rightsViolated.length > 0) {
@@ -152,36 +172,28 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
         for (const victim of data.victims) {
             if (victim.name.trim() === '') continue;
 
-            const { data: partyData, error: partyError } = await supabase
-                .from('docket_parties')
-                .insert({
-                    docket_id: docketId,
-                    name: victim.name,
-                    party_type: 'VICTIM'
-                })
-                .select('id')
-                .single();
-
-            if (partyError) {
-                console.error('Error inserting victim:', partyError);
-                return { success: false, error: 'Failed to save victim' };
-            }
-
-            // Insert victim sectors
+            // Resolve sector IDs first
+            const sectorIds: number[] = [];
             if (victim.sectorNames.length > 0) {
-                const sectorIds: number[] = [];
                 for (const sectorName of victim.sectorNames) {
                     const sectorId = await getSectorIdByName(supabase, sectorName);
-                    if (sectorId) sectorIds.push(sectorId);
+                    if (sectorId) {
+                        sectorIds.push(sectorId);
+                    }
                 }
+            }
 
-                if (sectorIds.length > 0) {
-                    const sectorsToInsert = sectorIds.map(sectorId => ({
-                        party_id: partyData.id,
-                        sector_id: sectorId
-                    }));
-                    await supabase.from('docket_party_sectors').insert(sectorsToInsert);
-                }
+            // Use RPC to insert atomically
+            const { error: rpcError } = await supabase.rpc('insert_party_with_sectors', {
+                p_docket_id: docketId,
+                p_name: victim.name,
+                p_party_type: 'VICTIM',
+                p_sector_ids: sectorIds
+            });
+
+            if (rpcError) {
+                console.error('Error inserting victim (RPC):', rpcError);
+                return { success: false, error: 'Failed to save victim: ' + rpcError.message };
             }
         }
 
@@ -189,36 +201,28 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
         for (const respondent of data.respondents) {
             if (respondent.name.trim() === '') continue;
 
-            const { data: partyData, error: partyError } = await supabase
-                .from('docket_parties')
-                .insert({
-                    docket_id: docketId,
-                    name: respondent.name,
-                    party_type: 'RESPONDENT'
-                })
-                .select('id')
-                .single();
-
-            if (partyError) {
-                console.error('Error inserting respondent:', partyError);
-                return { success: false, error: 'Failed to save respondent' };
-            }
-
-            // Insert respondent sectors
+            // Resolve sector IDs first
+            const sectorIds: number[] = [];
             if (respondent.sectorNames.length > 0) {
-                const sectorIds: number[] = [];
                 for (const sectorName of respondent.sectorNames) {
                     const sectorId = await getSectorIdByName(supabase, sectorName);
-                    if (sectorId) sectorIds.push(sectorId);
+                    if (sectorId) {
+                        sectorIds.push(sectorId);
+                    }
                 }
+            }
 
-                if (sectorIds.length > 0) {
-                    const sectorsToInsert = sectorIds.map(sectorId => ({
-                        party_id: partyData.id,
-                        sector_id: sectorId
-                    }));
-                    await supabase.from('docket_party_sectors').insert(sectorsToInsert);
-                }
+            // Use RPC to insert atomically
+            const { error: rpcError } = await supabase.rpc('insert_party_with_sectors', {
+                p_docket_id: docketId,
+                p_name: respondent.name,
+                p_party_type: 'RESPONDENT',
+                p_sector_ids: sectorIds
+            });
+
+            if (rpcError) {
+                console.error('Error inserting respondent (RPC):', rpcError);
+                return { success: false, error: 'Failed to save respondent: ' + rpcError.message };
             }
         }
 
@@ -246,6 +250,38 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             if (insertStaffError) {
                 console.error('Error inserting new staff:', insertStaffError);
                 return { success: false, error: 'Failed to save new staff' };
+            }
+        }
+
+        // 5. Update Complainants (Delete all and re-insert)
+        const { error: deleteComplainantsError } = await supabase
+            .from('docket_complainants')
+            .delete()
+            .eq('docket_id', docketId);
+
+        if (deleteComplainantsError) {
+            console.error('Error deleting existing complainants:', deleteComplainantsError);
+            return { success: false, error: 'Failed to update complainants' };
+        }
+
+        if (data.complainants.length > 0) {
+            const complainantsToInsert = data.complainants
+                .filter(c => c.name.trim() !== '')
+                .map(c => ({
+                    docket_id: docketId,
+                    name: c.name,
+                    contact_number: c.contactNumber
+                }));
+
+            if (complainantsToInsert.length > 0) {
+                const { error: insertComplainantsError } = await supabase
+                    .from('docket_complainants')
+                    .insert(complainantsToInsert);
+
+                if (insertComplainantsError) {
+                    console.error('Error inserting new complainants:', insertComplainantsError);
+                    return { success: false, error: 'Failed to save new complainants' };
+                }
             }
         }
 

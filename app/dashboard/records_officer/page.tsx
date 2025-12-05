@@ -196,7 +196,7 @@ export default async function RecordsOfficerDashboard() {
                                 </div>
 
                                 {/* Charts container */}
-                                <div className="flex-1 flex flex-col justify-center items-center space-y-10 py-6">
+                                <div className="flex-1 flex flex-col justify-start items-center space-y-10 py-6">
                                     <CaseTypeChart data={caseTypeData} />
                                     <CaseAgeingChart data={ageingData} />
                                 </div>

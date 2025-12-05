@@ -162,7 +162,8 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
         rightsViolated: rightsViolated,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),
         respondents: respondentsWithNames.map(r => ({ name: r.name, sectorNames: r.sectors })),
-        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId)
+        staffInChargeIds: formData.staff.filter(s => s.userId.trim() !== '').map(s => s.userId),
+        complainants: formData.complainants.filter(c => c.name.trim() !== '')
     };
 
     // Submit to database

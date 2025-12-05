@@ -105,6 +105,11 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const [respondentSectorSearch, setRespondentSectorSearch] = useState('');
     const respondentDropdownRef = useRef<HTMLDivElement>(null);
 
+    // Staff dropdown state
+    const [openStaffDropdown, setOpenStaffDropdown] = useState<number | null>(null);
+    const [staffSearch, setStaffSearch] = useState('');
+    const staffDropdownRef = useRef<HTMLDivElement>(null);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -116,11 +121,65 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 setOpenRespondentSectorDropdown(null);
                 setRespondentSectorSearch('');
             }
+            if (staffDropdownRef.current && !staffDropdownRef.current.contains(event.target as Node)) {
+                setOpenStaffDropdown(null);
+                setStaffSearch('');
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Scroll to victim dropdown when opened
+    useEffect(() => {
+        if (openVictimSectorDropdown !== null && victimDropdownRef.current) {
+            setTimeout(() => {
+                const menu = victimDropdownRef.current?.lastElementChild;
+                menu?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+    }, [openVictimSectorDropdown]);
+
+    // Scroll to respondent dropdown when opened
+    useEffect(() => {
+        if (openRespondentSectorDropdown !== null && respondentDropdownRef.current) {
+            setTimeout(() => {
+                const menu = respondentDropdownRef.current?.lastElementChild;
+                menu?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+    }, [openRespondentSectorDropdown]);
+
+    // Scroll to staff dropdown when opened
+    useEffect(() => {
+        if (openStaffDropdown !== null && staffDropdownRef.current) {
+            setTimeout(() => {
+                const menu = staffDropdownRef.current?.lastElementChild;
+                menu?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+    }, [openStaffDropdown]);
+
+    // Calendar refs and scroll logic
+    const calendarRef = useRef<HTMLDivElement>(null);
+    const deadlineCalendarRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (showCalendar && calendarRef.current) {
+            setTimeout(() => {
+                calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [showCalendar]);
+
+    useEffect(() => {
+        if (showDeadlineCalendar && deadlineCalendarRef.current) {
+            setTimeout(() => {
+                deadlineCalendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [showDeadlineCalendar]);
 
     const [initialState, setInitialState] = useState<any>(null);
 
@@ -164,6 +223,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 setVictims(details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }]);
                 setRespondents(details.respondents.length > 0 ? details.respondents : []);
                 setStaff(details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }]);
+                setComplainants(details.complainants && details.complainants.length > 0 ? details.complainants : [{ name: '', contactNumber: '' }]);
 
                 // Format status for display
                 let currentStatus = 'Pending';
@@ -188,7 +248,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                     respondents: details.respondents.length > 0 ? details.respondents : [],
                     staff: details.staff.length > 0 ? details.staff : [{ userId: '', email: '' }],
                     status: currentStatus,
-                    complainants: [{ name: '', contactNumber: '' }]
+                    complainants: details.complainants && details.complainants.length > 0 ? details.complainants : [{ name: '', contactNumber: '' }]
                 });
             }
         } catch (error) {
@@ -609,7 +669,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 deadline,
                 typeOfRequestId: Number(typeOfRequest),
                 violationCategory: categories.join(','),
-                complainants: complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
+                complainants: isMotuProprio ? [] : complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
                 modeOfRequestId: Number(modeOfRequest),
                 rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
                 victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
@@ -736,7 +796,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         }
 
         return (
-            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
+            <div ref={field === 'received' ? calendarRef : deadlineCalendarRef} className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
                 <div className="flex justify-between items-center mb-4">
                     <button
                         onClick={() => {
@@ -866,6 +926,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         </div>
     );
 
+    const isMotuProprio = lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio';
+
     return (
         <div>
             {isOpen && (
@@ -965,11 +1027,11 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                     {/* Row 1: Date Received, Type of Request, Category */}
                                     <div className="grid grid-cols-3 gap-6">
                                         {/* Date Received */}
-                                        <div className="relative">
+                                        <div>
                                             <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Date Received
                                             </label>
-                                            <div className="flex items-center gap-2">
+                                            <div className="relative flex items-center gap-2">
                                                 <input
                                                     type="text"
                                                     placeholder="mm/dd/yyyy"
@@ -988,8 +1050,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 >
                                                     <Calendar size={20} />
                                                 </button>
+                                                {showCalendar && renderCalendar('received')}
                                             </div>
-                                            {showCalendar && renderCalendar('received')}
                                         </div>
 
                                         {/* Type of Request */}
@@ -1063,11 +1125,11 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                     {/* Row 2: Deadline, Mode of Request, Rights */}
                                     <div className="grid grid-cols-3 gap-6">
                                         {/* Deadline */}
-                                        <div className="relative">
+                                        <div>
                                             <label className="block text-graphite text-sm font-semibold mb-2">
                                                 Deadline
                                             </label>
-                                            <div className="flex items-center gap-2">
+                                            <div className="relative flex items-center gap-2">
                                                 <input
                                                     type="text"
                                                     placeholder="mm/dd/yyyy"
@@ -1087,8 +1149,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 >
                                                     <Calendar size={20} />
                                                 </button>
+                                                {showDeadlineCalendar && renderCalendar('deadline')}
                                             </div>
-                                            {showDeadlineCalendar && renderCalendar('deadline')}
                                         </div>
 
                                         {/* Mode of Request */}
@@ -1165,42 +1227,42 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                         <div>
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <label className="block text-graphite text-sm font-semibold">
-                                                    Name of Complainant ({complainants.filter(c => c.name.trim() !== '').length})
+                                                    Name of Complainant ({isMotuProprio ? 0 : complainants.filter(c => c.name.trim() !== '').length})
                                                 </label>
                                                 <button
                                                     onClick={addComplainantField}
-                                                    disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    disabled={!isEditable || isMotuProprio}
+                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
                                                     <Plus size={16} />
                                                 </button>
                                             </div>
                                             <div className="space-y-3">
-                                                {complainants.map((comp, index) => (
+                                                {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).map((comp, index) => (
                                                     <div key={index} className="flex gap-2 items-start">
                                                         <div className="flex-1 flex flex-col gap-2">
                                                             <input
                                                                 type="text"
                                                                 placeholder="Name of Complainant"
-                                                                value={comp.name}
-                                                                onChange={(e) => updateComplainant(index, 'name', e.target.value)}
-                                                                disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                                                value={isMotuProprio ? '' : comp.name}
+                                                                onChange={(e) => !isMotuProprio && updateComplainant(index, 'name', e.target.value)}
+                                                                disabled={!isEditable || isMotuProprio}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                             />
                                                             <input
                                                                 type="text"
                                                                 placeholder="Contact Number"
-                                                                value={comp.contactNumber}
-                                                                onChange={(e) => updateComplainant(index, 'contactNumber', e.target.value)}
-                                                                disabled={!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio'}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || lookups.requestModes.find(m => m.id === modeOfRequest)?.name === 'Motu Proprio') ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                                                value={isMotuProprio ? '' : comp.contactNumber}
+                                                                onChange={(e) => !isMotuProprio && updateComplainant(index, 'contactNumber', e.target.value)}
+                                                                disabled={!isEditable || isMotuProprio}
+                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                             />
                                                         </div>
-                                                        {complainants.length > 1 && (
+                                                        {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).length > 1 && (
                                                             <button
                                                                 onClick={() => removeComplainant(index)}
-                                                                disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 mt-2 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                disabled={!isEditable || isMotuProprio}
+                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 mt-2 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                             >
                                                                 <X size={16} />
                                                             </button>
@@ -1386,22 +1448,69 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                 {staff.map((member, index) => (
                                                     <div key={index} className="flex gap-2 items-start">
                                                         <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                            <div className="relative">
-                                                                <select
-                                                                    value={member.userId}
-                                                                    onChange={(e) => updateStaff(index, e.target.value)}
+                                                            <div className="relative" ref={openStaffDropdown === index ? staffDropdownRef : null}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setOpenStaffDropdown(openStaffDropdown === index ? null : index)}
                                                                     disabled={!isEditable}
-                                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                    style={{ appearance: 'none' }}
+                                                                    className={`w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                                 >
-                                                                    <option value="">Assign the case to...</option>
-                                                                    {users.map((user) => (
-                                                                        <option key={user.id} value={user.id} className='text-black'>
-                                                                            {user.first_name} {user.last_name}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                                    <span className={`truncate ${member.userId ? 'text-black' : 'text-ash'}`}>
+                                                                        {member.userId
+                                                                            ? (() => {
+                                                                                const user = users.find(u => u.id === member.userId);
+                                                                                return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+                                                                            })()
+                                                                            : 'Assign the case to...'}
+                                                                    </span>
+                                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4" />
+                                                                </button>
+
+                                                                {openStaffDropdown === index && (
+                                                                    <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
+                                                                        {/* Search Bar */}
+                                                                        <div className="p-2 border-b">
+                                                                            <div className="relative">
+                                                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
+                                                                                <input
+                                                                                    type="text"
+                                                                                    placeholder="Search staff..."
+                                                                                    value={staffSearch}
+                                                                                    onChange={(e) => setStaffSearch(e.target.value)}
+                                                                                    className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Options */}
+                                                                        <div className="max-h-60 overflow-y-auto">
+                                                                            {users
+                                                                                .filter(user => {
+                                                                                    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+                                                                                    return fullName.includes(staffSearch.toLowerCase());
+                                                                                })
+                                                                                .map((user) => (
+                                                                                    <div
+                                                                                        key={user.id}
+                                                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
+                                                                                        onClick={() => {
+                                                                                            updateStaff(index, user.id);
+                                                                                            setOpenStaffDropdown(null);
+                                                                                            setStaffSearch('');
+                                                                                        }}
+                                                                                    >
+                                                                                        {user.first_name} {user.last_name}
+                                                                                    </div>
+                                                                                ))}
+                                                                            {users.filter(user => `${user.first_name} ${user.last_name}`.toLowerCase().includes(staffSearch.toLowerCase())).length === 0 && (
+                                                                                <div className="px-4 py-2 text-sm text-gray-500">
+                                                                                    No staff found
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <input
                                                                 type="email"
@@ -1436,8 +1545,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                     {currentUserRole === 'records_officer' && (
                                         <button
                                             onClick={handleDelete}
-                                            disabled={!isEditable}
-                                            className={`bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
                                         >
                                             Delete
                                         </button>

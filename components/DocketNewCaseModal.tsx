@@ -94,6 +94,11 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
     const [respondentSectorSearch, setRespondentSectorSearch] = useState('');
     const respondentDropdownRef = useRef<HTMLDivElement>(null);
 
+    // Staff dropdown state
+    const [openStaffDropdown, setOpenStaffDropdown] = useState<number | null>(null);
+    const [staffSearch, setStaffSearch] = useState('');
+    const staffDropdownRef = useRef<HTMLDivElement>(null);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -104,6 +109,10 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             if (respondentDropdownRef.current && !respondentDropdownRef.current.contains(event.target as Node)) {
                 setOpenRespondentSectorDropdown(null);
                 setRespondentSectorSearch('');
+            }
+            if (staffDropdownRef.current && !staffDropdownRef.current.contains(event.target as Node)) {
+                setOpenStaffDropdown(null);
+                setStaffSearch('');
             }
         };
 
@@ -116,7 +125,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
         if (openVictimSectorDropdown !== null && victimDropdownRef.current) {
             // Small delay to allow render to update layout
             setTimeout(() => {
-                victimDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                victimDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 100);
         }
     }, [openVictimSectorDropdown]);
@@ -126,10 +135,30 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
         if (openRespondentSectorDropdown !== null && respondentDropdownRef.current) {
             // Small delay to allow render to update layout
             setTimeout(() => {
-                respondentDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                respondentDropdownRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 100);
         }
     }, [openRespondentSectorDropdown]);
+
+    // Scroll to staff dropdown when opened
+    useEffect(() => {
+        if (openStaffDropdown !== null && staffDropdownRef.current) {
+            setTimeout(() => {
+                const menu = staffDropdownRef.current?.lastElementChild;
+                menu?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+    }, [openStaffDropdown]);
+
+    // Calendar ref and scroll logic
+    const calendarRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (showCalendar && calendarRef.current) {
+            setTimeout(() => {
+                calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    }, [showCalendar]);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -479,7 +508,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
         }
 
         return (
-            <div className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
+            <div ref={calendarRef} className="absolute text-midnightNavy top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10 w-80">
                 <div className="flex justify-between items-center mb-4">
                     <button
                         onClick={() => {
@@ -640,11 +669,11 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                 {/* Row 1: Date Received, Type of Request, Category */}
                                 <div className="grid grid-cols-3 gap-6">
                                     {/* Date Received */}
-                                    <div className="relative">
+                                    <div>
                                         <label className="block text-graphite text-sm font-semibold mb-2">
                                             Date Received
                                         </label>
-                                        <div className="flex items-center gap-2">
+                                        <div className="relative flex items-center gap-2">
                                             <input
                                                 type="text"
                                                 value={dateReceived || ''}
@@ -661,8 +690,8 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                             >
                                                 <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
                                             </button>
+                                            {showCalendar && calendarMode === 'dateReceived' && renderCalendar()}
                                         </div>
-                                        {showCalendar && renderCalendar()}
                                     </div>
 
                                     {/* Type of Request */}
@@ -755,7 +784,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                         <label className="block text-graphite text-sm font-semibold mb-2">
                                             Deadline
                                         </label>
-                                        <div className="flex items-center gap-2">
+                                        <div className="relative flex items-center gap-2">
                                             <input
                                                 type="text"
                                                 placeholder='mm/dd/yyyy'
@@ -772,6 +801,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                             >
                                                 <img src="/icon20.png" alt="Calendar" className="w-5 h-5" />
                                             </button>
+                                            {showCalendar && calendarMode === 'deadline' && renderCalendar()}
                                         </div>
                                     </div>
 
@@ -1064,21 +1094,68 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                             {staff.map((member, index) => (
                                                 <div key={index} className="flex gap-2 items-start">
                                                     <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                        <div className="relative">
-                                                            <select
-                                                                value={member.userId}
-                                                                onChange={(e) => updateStaff(index, e.target.value)}
-                                                                className="w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                style={{ appearance: 'none' }}
+                                                        <div className="relative" ref={openStaffDropdown === index ? staffDropdownRef : null}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setOpenStaffDropdown(openStaffDropdown === index ? null : index)}
+                                                                className="w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center"
                                                             >
-                                                                <option value="">Assign the case to...</option>
-                                                                {users.map((user) => (
-                                                                    <option key={user.id} value={user.id} className='text-black'>
-                                                                        {user.first_name} {user.last_name}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                            <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                                <span className={`truncate ${member.userId ? 'text-black' : 'text-ash'}`}>
+                                                                    {member.userId
+                                                                        ? (() => {
+                                                                            const user = users.find(u => u.id === member.userId);
+                                                                            return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+                                                                        })()
+                                                                        : 'Assign the case to...'}
+                                                                </span>
+                                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4" />
+                                                            </button>
+
+                                                            {openStaffDropdown === index && (
+                                                                <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
+                                                                    {/* Search Bar */}
+                                                                    <div className="p-2 border-b">
+                                                                        <div className="relative">
+                                                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="Search staff..."
+                                                                                value={staffSearch}
+                                                                                onChange={(e) => setStaffSearch(e.target.value)}
+                                                                                className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Options */}
+                                                                    <div className="max-h-60 overflow-y-auto">
+                                                                        {users
+                                                                            .filter(user => {
+                                                                                const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+                                                                                return fullName.includes(staffSearch.toLowerCase());
+                                                                            })
+                                                                            .map((user) => (
+                                                                                <div
+                                                                                    key={user.id}
+                                                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
+                                                                                    onClick={() => {
+                                                                                        updateStaff(index, user.id);
+                                                                                        setOpenStaffDropdown(null);
+                                                                                        setStaffSearch('');
+                                                                                    }}
+                                                                                >
+                                                                                    {user.first_name} {user.last_name}
+                                                                                </div>
+                                                                            ))}
+                                                                        {users.filter(user => `${user.first_name} ${user.last_name}`.toLowerCase().includes(staffSearch.toLowerCase())).length === 0 && (
+                                                                            <div className="px-4 py-2 text-sm text-gray-500">
+                                                                                No staff found
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <input
                                                             type="email"

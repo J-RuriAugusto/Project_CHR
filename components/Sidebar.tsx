@@ -18,9 +18,9 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: S
                 <li>
                     <Link
                         href={basePath}
-                        className={`flex justify-start space-x-3 text-base font-semibold transition pl-10
+                        className={`flex justify-start space-x-3 text-base font-semibold transition pl-10 rounded-md py-2
                             ${currentPath === basePath || currentPath === `${basePath}/`
-                                ? "text-white rounded-md py-2"
+                                ? "text-white"
                                 : "text-paleSky hover:text-white"
                             }`}
                     >
@@ -32,9 +32,9 @@ export default function Sidebar({ currentPath, role = 'investigation_chief' }: S
                 <li>
                     <Link
                         href={`${basePath}/docket`}
-                        className={`flex justify-start space-x-3 text-base font-semibold transition pl-10
+                        className={`flex justify-start space-x-3 text-base font-semibold transition pl-10 rounded-md py-2
                             ${currentPath === `${basePath}/docket`
-                                ? "text-white rounded-md py-2"
+                                ? "text-white"
                                 : "text-paleSky hover:text-white"
                             }`}
                     >

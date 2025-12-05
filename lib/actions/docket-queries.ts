@@ -204,6 +204,23 @@ export async function getDocketDetails(id: string) {
         return null;
     }
 
+    // 4. Fetch complainants
+    const { data: complainantsData, error: complainantsError } = await supabase
+        .from('docket_complainants')
+        .select('name, contact_number')
+        .eq('docket_id', id);
+
+    if (complainantsError) {
+        console.error('Error fetching complainants:', complainantsError);
+        return null;
+    }
+
+    // Process complainants
+    const complainants = complainantsData.map((c: any) => ({
+        name: c.name,
+        contactNumber: c.contact_number
+    }));
+
     // Process parties into victims and respondents
     const victims = parties
         .filter((p: any) => p.party_type === 'VICTIM')
@@ -237,6 +254,7 @@ export async function getDocketDetails(id: string) {
         respondents,
         staff: staff.length > 0 ? staff : [{ userId: '', email: '' }],
         status: docket.status || 'PENDING',
-        updatedAt: new Date(docket.updated_at).toLocaleDateString('en-US')
+        updatedAt: new Date(docket.updated_at).toLocaleDateString('en-US'),
+        complainants: complainants.length > 0 ? complainants : [{ name: '', contactNumber: '' }]
     };
 }

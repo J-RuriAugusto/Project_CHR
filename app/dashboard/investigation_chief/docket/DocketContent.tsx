@@ -114,7 +114,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 </div>
 
                 {/* Navigation Links */}
-                <Sidebar currentPath={currentPath} />
+                <Sidebar currentPath={currentPath} role="investigation_chief" />
 
                 <form action={signOut} className="pt-4 border-t">
                     <button
