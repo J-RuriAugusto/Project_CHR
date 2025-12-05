@@ -1,6 +1,7 @@
 'use client';
 
 import { CaseTypeBreakdown, CaseAgeingOverview } from '@/lib/actions/analytics';
+import { useState } from 'react';
 
 interface DonutChartProps {
     data: Array<{
@@ -17,6 +18,13 @@ function DonutChart({ data, size = 160 }: DonutChartProps) {
     const centerY = size / 2;
     const radius = size / 2 - 10;
     const innerRadius = radius * 0.5; // Thicker donut
+
+    const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number; visible: boolean }>({
+        text: '',
+        x: 0,
+        y: 0,
+        visible: false
+    });
 
     let currentAngle = -90; // Start from top
 
@@ -41,40 +49,79 @@ function DonutChart({ data, size = 160 }: DonutChartProps) {
     const total = data.reduce((sum, item) => sum + item.value, 0);
 
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            <defs>
-                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="rgba(0,0,0,0.25)" />
-                </filter>
-            </defs>
-            {data.map((item, index) => {
-                const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                const angle = (percentage / 100) * 360;
-                const path = createArc(currentAngle, currentAngle + angle, radius, innerRadius);
-                currentAngle += angle;
+        <>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <defs>
+                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="rgba(0,0,0,0.25)" />
+                    </filter>
+                </defs>
+                {data.map((item, index) => {
+                    const percentage = total > 0 ? (item.value / total) * 100 : 0;
+                    let angle = (percentage / 100) * 360;
+                    // Fix for 360 degrees arc not rendering
+                    if (angle >= 360) angle = 359.999;
 
-                return (
-                    <g key={index}>
-                        <path
-                            d={path}
-                            fill={item.color}
-                            className="hover:opacity-90 transition-opacity cursor-pointer"
-                            filter="url(#shadow)"
-                        />
-                    </g>
-                );
-            })}
-            {/* Center text showing total */}
-            <text
-                x={centerX}
-                y={centerY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="text-3xl font-bold fill-midnightNavy"
-            >
-                {total}
-            </text>
-        </svg>
+                    const path = createArc(currentAngle, currentAngle + angle, radius, innerRadius);
+                    currentAngle += angle;
+
+                    return (
+                        <g key={index}>
+                            <path
+                                d={path}
+                                fill={item.color}
+                                className="hover:opacity-90 transition-opacity cursor-pointer"
+                                filter="url(#shadow)"
+                                onMouseEnter={(e) => {
+                                    setTooltip({
+                                        text: `${Math.round(percentage)}%`,
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                        visible: true
+                                    });
+                                }}
+                                onMouseMove={(e) => {
+                                    setTooltip(prev => ({
+                                        ...prev,
+                                        x: e.clientX,
+                                        y: e.clientY,
+                                        visible: true
+                                    }));
+                                }}
+                                onMouseLeave={() => {
+                                    setTooltip(prev => ({ ...prev, visible: false }));
+                                }}
+                            />
+                        </g>
+                    );
+                })}
+                {/* Center text showing total */}
+                <text
+                    x={centerX}
+                    y={centerY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="text-3xl font-bold fill-midnightNavy"
+                >
+                    {total}
+                </text>
+            </svg>
+            {tooltip.visible && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: tooltip.y - 30,
+                        left: tooltip.x,
+                        transform: 'translateX(-50%)',
+                        pointerEvents: 'none',
+                        zIndex: 50
+                    }}
+                    className="bg-midnightNavy text-white text-xs px-2 py-1 rounded shadow-lg"
+                >
+                    {tooltip.text}
+                </div>
+            )}
+        </>
     );
 }
 
@@ -110,7 +157,7 @@ export function CaseTypeChart({ data }: CaseTypeChartProps) {
                             ></span>
                             <div className="flex flex-col">
                                 <span className="text-xs text-deepNavy font-regular">
-                                    {item.type}
+                                    {item.type} <span className="text-slateGray">({item.count} cases)</span>
                                 </span>
                             </div>
                         </div>
@@ -153,7 +200,7 @@ export function CaseAgeingChart({ data }: CaseAgeingChartProps) {
                             ></span>
                             <div className="flex flex-col">
                                 <span className="text-xs text-deepNavy font-regular">
-                                    {item.range}
+                                    {item.range} <span className="text-slateGray">({item.count} cases)</span>
                                 </span>
                             </div>
                         </div>

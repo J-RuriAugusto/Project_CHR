@@ -9,8 +9,8 @@ import Sidebar from '@/components/Sidebar';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import UrgentCases from '@/components/dashboard/UrgentCases';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
-import { getCaseTypeBreakdown, getStatusOverview } from '@/lib/actions/analytics';
-import { CaseTypeChart, StatusOverviewChart } from '@/components/dashboard/Analytics';
+import { getCaseTypeBreakdown, getCaseAgeingOverview } from '@/lib/actions/analytics';
+import { CaseTypeChart, CaseAgeingChart } from '@/components/dashboard/Analytics';
 
 export default async function RecordsOfficerDashboard() {
     const supabase = await createClient();
@@ -46,7 +46,7 @@ export default async function RecordsOfficerDashboard() {
         .eq('role', 'officer');
     const urgentCases = await getUrgentCases();
     const caseTypeData = await getCaseTypeBreakdown();
-    const statusOverviewData = await getStatusOverview();
+    const ageingData = await getCaseAgeingOverview();
 
     return (
         <div className="h-screen flex bg-gray-50">
@@ -198,7 +198,7 @@ export default async function RecordsOfficerDashboard() {
                                 {/* Charts container */}
                                 <div className="flex-1 flex flex-col justify-center items-center space-y-10 py-6">
                                     <CaseTypeChart data={caseTypeData} />
-                                    <StatusOverviewChart data={statusOverviewData} />
+                                    <CaseAgeingChart data={ageingData} />
                                 </div>
                             </div>
                         </div>

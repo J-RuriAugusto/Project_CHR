@@ -9,25 +9,59 @@ export interface CaseTypeBreakdown {
 
 
 
-export async function getCaseTypeBreakdown(): Promise<CaseTypeBreakdown[]> {
-    // Static data - replace these numbers with your actual counts
-    const caseTypeCounts = {
-        'Legal Assistance / OPS': 14,
-        'Investigation': 16,
+import { createClient } from '@/utils/supabase/server';
+
+export async function getCaseTypeBreakdown(officerId?: string): Promise<CaseTypeBreakdown[]> {
+    const supabase = await createClient();
+
+    // Start building the query
+    let query = supabase
+        .from('dockets')
+        .select(`
+            id,
+            request_types (
+                name
+            )${officerId ? ', docket_staff!inner(user_id)' : ''}
+        `);
+
+    // Apply officer filter if provided
+    if (officerId) {
+        query = query.eq('docket_staff.user_id', officerId);
+    }
+
+    // Execute query
+    const { data: dockets, error } = await query;
+
+    if (error) {
+        console.error('Error fetching case type breakdown:', error);
+        return [];
+    }
+
+    // Initialize counts
+    const counts: Record<string, number> = {
+        'Legal Assistance / OPS': 0,
+        'Investigation': 0
     };
 
-    const total = Object.values(caseTypeCounts).reduce((sum, count) => sum + count, 0);
+    // Process dockets
+    dockets.forEach((docket: any) => {
+        const typeName = docket.request_types?.name;
+        if (typeName === 'Legal Assistance / OPS') {
+            counts['Legal Assistance / OPS']++;
+        } else if (typeName === 'Legal Investigation') {
+            counts['Investigation']++;
+        }
+    });
 
-    // Color mapping for the two case types
+    // Color mapping
     const colorMap: Record<string, string> = {
         'Legal Assistance / OPS': '#3B82F6', // Mid Blue
         'Investigation': '#172554',          // Darkest Blue
     };
 
-    const breakdown: CaseTypeBreakdown[] = Object.entries(caseTypeCounts).map(([type, count]) => ({
+    const breakdown: CaseTypeBreakdown[] = Object.entries(counts).map(([type, count]) => ({
         type,
         count,
-        // percentage: total > 0 ? Math.round((count / total) * 100) : 0,
         color: colorMap[type] || '#012453'
     }));
 
@@ -40,15 +74,60 @@ export interface CaseAgeingOverview {
     color: string;
 }
 
-export async function getCaseAgeingOverview(): Promise<CaseAgeingOverview[]> {
-    // Static data - replace these numbers with your actual counts
-    const ageingCounts = {
-        '0 - 30 days': 12,
-        '31 - 60 days': 8,
-        '61 - 90 days': 5,
-        '91 - 120 days': 4,
-        '121 days and above': 6,
+export async function getCaseAgeingOverview(officerId?: string): Promise<CaseAgeingOverview[]> {
+    const supabase = await createClient();
+
+    // Start building the query
+    let query = supabase
+        .from('dockets')
+        .select(`
+            created_at
+            ${officerId ? ', docket_staff!inner(user_id)' : ''}
+        `)
+        .eq('status', 'PENDING');
+
+    // Apply officer filter if provided
+    if (officerId) {
+        query = query.eq('docket_staff.user_id', officerId);
+    }
+
+    // Execute query
+    const { data: dockets, error } = await query;
+
+    if (error) {
+        console.error('Error fetching case ageing overview:', error);
+        return [];
+    }
+
+    // Initialize counts
+    const ageingCounts: Record<string, number> = {
+        '0 - 30 days': 0,
+        '31 - 60 days': 0,
+        '61 - 90 days': 0,
+        '91 - 120 days': 0,
+        '121 days and above': 0,
     };
+
+    const now = new Date();
+
+    // Process dockets
+    dockets.forEach((docket: any) => {
+        const createdAt = new Date(docket.created_at);
+        const diffTime = Math.abs(now.getTime() - createdAt.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 30) {
+            ageingCounts['0 - 30 days']++;
+        } else if (diffDays <= 60) {
+            ageingCounts['31 - 60 days']++;
+        } else if (diffDays <= 90) {
+            ageingCounts['61 - 90 days']++;
+        } else if (diffDays <= 120) {
+            ageingCounts['91 - 120 days']++;
+        } else {
+            ageingCounts['121 days and above']++;
+        }
+    });
 
     // Color mapping for different age ranges (Blue-Green Gradient)
     const colorMap: Record<string, string> = {

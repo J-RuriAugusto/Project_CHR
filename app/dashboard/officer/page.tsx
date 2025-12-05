@@ -44,8 +44,8 @@ export default async function OfficerDashboard() {
         .select('id, first_name, last_name, email, role')
         .eq('role', 'officer');
     const urgentCases = await getUrgentCases(userData.id);
-    const caseTypeData = await getCaseTypeBreakdown();
-    const ageingData = await getCaseAgeingOverview();
+    const caseTypeData = await getCaseTypeBreakdown(userData.id);
+    const ageingData = await getCaseAgeingOverview(userData.id);
 
     return (
         <div className="h-screen flex bg-gray-50">

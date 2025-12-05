@@ -112,8 +112,8 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
     };
 
     return (
-        <div className="flex-1 pr-0 lg:pr-6">
-            <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 pr-0 lg:pr-6 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h2 className="text-base text-midnightNavy font-semibold">
                     Urgent Cases
                 </h2>
@@ -122,24 +122,26 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
                 </Link>
             </div>
 
-            {/* This Week */}
-            <h3 className="text-sm text-slateBlue font-semibold mb-2">Due This Week</h3>
-            <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                {dueThisWeek.length > 0 ? (
-                    dueThisWeek.map(renderCard)
-                ) : (
-                    <p className="text-sm text-gray-500 italic">No cases due this week.</p>
-                )}
-            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                {/* This Week */}
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">Due This Week</h3>
+                <div className="space-y-3 mb-6">
+                    {dueThisWeek.length > 0 ? (
+                        dueThisWeek.map(renderCard)
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No cases due this week.</p>
+                    )}
+                </div>
 
-            {/* Last Week */}
-            <h3 className="text-sm text-slateBlue font-semibold mb-2">Due Last Week</h3>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                {dueLastWeek.length > 0 ? (
-                    dueLastWeek.map(renderCard)
-                ) : (
-                    <p className="text-sm text-gray-500 italic">No cases due last week.</p>
-                )}
+                {/* Last Week */}
+                <h3 className="text-sm text-slateBlue font-semibold mb-2 sticky top-0 bg-white z-10 pb-2">Due Last Week</h3>
+                <div className="space-y-3">
+                    {dueLastWeek.length > 0 ? (
+                        dueLastWeek.map(renderCard)
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No cases due last week.</p>
+                    )}
+                </div>
             </div>
 
             <DocketViewModal
