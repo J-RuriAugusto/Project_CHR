@@ -225,7 +225,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                                         }
                                     }}
                                     disabled={isUpdating}
-                                    className="w-full px-4 py-2 rounded-md bg-darkBlue text-white text-center text-sm font-semibold appearance-none cursor-pointer truncate"
+                                    className="w-full pl-4 pr-10 py-2 rounded-md bg-darkBlue text-white text-center text-sm font-semibold appearance-none cursor-pointer truncate"
                                     defaultValue=""
                                 >
                                     <option value="" disabled hidden>Mark selected as</option>

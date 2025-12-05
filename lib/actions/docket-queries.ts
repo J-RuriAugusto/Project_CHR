@@ -83,7 +83,14 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
     today.setHours(0, 0, 0, 0);
 
     return data.map((docket: any) => {
-        const deadlineDate = new Date(docket.deadline);
+        // Parse deadline manually to ensure it's treated as local time 00:00:00
+        // new Date("YYYY-MM-DD") parses as UTC, which can be previous day in local time
+        const deadlineParts = docket.deadline.split('-');
+        const deadlineDate = new Date(
+            parseInt(deadlineParts[0]),
+            parseInt(deadlineParts[1]) - 1,
+            parseInt(deadlineParts[2])
+        );
         let status = docket.status;
 
         // If status is PENDING (or null/undefined which we treat as pending for safety), compute it

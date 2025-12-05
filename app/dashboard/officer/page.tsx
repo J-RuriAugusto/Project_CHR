@@ -9,6 +9,8 @@ import { signOut } from '../../../components/actions';
 import { getDashboardStats, getUrgentCases } from '@/lib/actions/dashboard-stats';
 import UrgentCases from '@/components/dashboard/UrgentCases';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
+import { getCaseTypeBreakdown, getCaseAgeingOverview } from '@/lib/actions/analytics';
+import { CaseTypeChart, CaseAgeingChart } from '@/components/dashboard/Analytics';
 
 export default async function OfficerDashboard() {
     const supabase = await createClient();
@@ -42,6 +44,8 @@ export default async function OfficerDashboard() {
         .select('id, first_name, last_name, email, role')
         .eq('role', 'officer');
     const urgentCases = await getUrgentCases(userData.id);
+    const caseTypeData = await getCaseTypeBreakdown();
+    const ageingData = await getCaseAgeingOverview();
 
     return (
         <div className="h-screen flex bg-gray-50">
@@ -192,67 +196,8 @@ export default async function OfficerDashboard() {
 
                                 {/* Charts container */}
                                 <div className="flex-1 flex flex-col justify-center items-center space-y-10 py-6">
-                                    {/* Chart 1 */}
-                                    <div className="w-full max-w-xs">
-                                        <h3 className="text-sm font-regular text-mutedSteelBlue mb-2 text-center">
-                                            Case Breakdown by Type
-                                        </h3>
-                                        <div className="flex items-center justify-center space-x-6 pt-4">
-                                            <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
-                                            {/* Legend */}
-                                            <div className="flex flex-col space-y-2">
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-oceanBlue"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        Legal Counseling
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-royalAzure"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        Investigation
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-deepCobalt"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        Torture
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Chart 2 */}
-                                    <div className="w-full max-w-xs">
-                                        <h3 className="text-sm font-regular text-mutedSteelBlue mb-2 text-center">
-                                            Case Ageing Overview
-                                        </h3>
-                                        <div className="flex items-center justify-center space-x-6 pt-4">
-                                            <div className="w-32 h-32 bg-gray-100 rounded-full"></div>
-                                            {/* Legend */}
-                                            <div className="flex flex-col space-y-2">
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-paleGreen"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        0 - 30 days
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-tealBlue"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        31 - 60 days
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <span className="w-3 h-3 rounded-full bg-cobaltBlue"></span>
-                                                    <span className="text-xs text-deepNavy font-regular">
-                                                        61 - 120 days
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <CaseTypeChart data={caseTypeData} />
+                                    <CaseAgeingChart data={ageingData} />
                                 </div>
                             </div>
                         </div>
