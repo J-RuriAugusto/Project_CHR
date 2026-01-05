@@ -1,7 +1,9 @@
-import Header from '@/components/Header/Header';
-import { createClient } from '@/utils/supabase/server';
+import Image from 'next/image';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { ResetButton } from './ResetButton';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export default async function ResetPassword({
   searchParams,
@@ -22,10 +24,16 @@ export default async function ResetPassword({
     'use server';
 
     const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
     const supabase = createClient();
 
+    if (password !== confirmPassword) {
+      return redirect(
+        `/reset-password?message=Passwords do not match&code=${searchParams.code || ''}`
+      );
+    }
+
     if (searchParams.code) {
-      const supabase = createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(
         searchParams.code
       );
@@ -54,52 +62,97 @@ export default async function ResetPassword({
   };
 
   return (
-    <div>
-      <Header />
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Navy Header */}
+      <header className="bg-[#012453] px-5 py-1">
+        <div className="flex items-center gap-2">
+          {/* Logo */}
+          <div className="relative w-44 h-20 -my-2">
+            <Image
+              src="/cmms-logo2.png"
+              alt="CMMS Logo"
+              fill
+              className="object-contain object-left"
+              priority
+            />
+          </div>
 
-      <Link
-        href="/"
-        className="py-2 px-4 rounded-md no-underline text-foreground bg-btn-background hover:bg-btn-background-hover text-sm m-4"
-      >
-        Home
-      </Link>
+          {/* Home Link */}
+          <Link
+            href="/"
+            className="text-white text-sm hover:text-gray-300 transition-colors"
+          >
+            Home
+          </Link>
+        </div>
+      </header>
 
-      <div className="w-full px-8 sm:max-w-md mx-auto mt-4">
-        <form
-          className="animate-in flex-1 flex flex-col w-full justify-center gap-2 text-foreground mb-4"
-          action={resetPassword}
-        >
-          <label className="text-md" htmlFor="password">
-            New Password
-          </label>
-          <input
-            className="rounded-md px-4 py-2 bg-inherit border mb-6"
-            type="password"
-            name="password"
-            placeholder="••••••••"
-            required
-          />
-          <label className="text-md" htmlFor="password">
-            Confirm New Password
-          </label>
-          <input
-            className="rounded-md px-4 py-2 bg-inherit border mb-6"
-            type="password"
-            name="confirmPassword"
-            placeholder="••••••••"
-            required
-          />
-          <button className="bg-indigo-700 rounded-md px-4 py-2 text-foreground mb-2">
-            Reset
-          </button>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl py-6 px-8 w-full max-w-[400px] flex flex-col items-center">
+          {/* Lock Icon */}
+          <div className="relative w-32 h-20 mb-2">
+            <Image
+              src="/streamline-plump-color_password-lock-flat.png"
+              alt="Reset Password"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
 
-          {searchParams?.message && (
-            <p className="mt-4 p-4 bg-foreground/10 text-foreground text-center">
-              {searchParams.message}
-            </p>
-          )}
-        </form>
-      </div>
+          {/* Title */}
+          <h1 className="text-[#2859C5] text-2xl font-bold mb-4 text-center font-sans">
+            Reset Your Password
+          </h1>
+
+          <form action={resetPassword} className="w-full space-y-3">
+            {/* New Password */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-semibold text-[#737373] mb-2 ml-1 font-sans"
+              >
+                New Password
+              </label>
+              <PasswordInput
+                id="password"
+                name="password"
+                placeholder="Input your new password..."
+                required
+              />
+            </div>
+
+            {/* Confirm New Password */}
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-semibold text-[#737373] mb-2 ml-1 font-sans"
+              >
+                Confirm New Password
+              </label>
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                placeholder="Confirm your new Password..."
+                required
+              />
+            </div>
+
+            <ResetButton />
+
+            {/* Error/Success Message */}
+            {searchParams?.message && (
+              <div className={`mt-4 p-3 rounded-md text-xs text-center ${searchParams.message.includes('success')
+                ? 'bg-green-50 text-green-700'
+                : 'bg-red-50 text-red-700'
+                }`}>
+                {searchParams.message}
+              </div>
+            )}
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

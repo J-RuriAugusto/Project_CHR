@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
+import { SubmitButton } from './SubmitButton';
 
 export default async function ForgotPassword({
   searchParams,
@@ -32,7 +33,7 @@ export default async function ForgotPassword({
       .select('email')
       .eq('email', email)
       .single();
-    
+
     if (!emailExists) {
       return redirect('/forgot-password?message=Email address not registered.');
     }
@@ -106,20 +107,15 @@ export default async function ForgotPassword({
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-[#0b2347] text-white py-3 rounded-full hover:bg-[#153568] transition text-sm font-medium"
-            >
-              Send Reset Link
-            </button>
+            {/* Submit Button */}
+            <SubmitButton />
 
             {/* Message */}
             {searchParams?.message && (
-              <div className={`p-4 rounded-md text-sm text-center ${
-                searchParams.message.includes('error') || searchParams.message.includes('Could not') 
-                  ? 'bg-red-50 text-red-700 border border-red-200' 
+              <div className={`p-4 rounded-md text-sm text-center ${searchParams.message.includes('error') || searchParams.message.includes('Could not')
+                  ? 'bg-red-50 text-red-700 border border-red-200'
                   : 'bg-green-50 text-green-700 border border-green-200'
-              }`}>
+                }`}>
                 {searchParams.message}
               </div>
             )}
