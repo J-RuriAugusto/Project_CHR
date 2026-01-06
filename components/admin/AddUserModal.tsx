@@ -22,7 +22,8 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
     email: '',
     first_name: '',
     last_name: '',
-    role: 'officer'
+    role: 'officer',
+    status: 'ACTIVE'
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,14 +40,16 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
         email: user.email,
         first_name: user.first_name,
         last_name: user.last_name,
-        role: user.role
+        role: user.role,
+        status: user.status?.toUpperCase() || 'ACTIVE'
       });
     } else {
       setFormData({
         email: '',
         first_name: '',
         last_name: '',
-        role: 'officer'
+        role: 'officer',
+        status: 'ACTIVE'
       });
     }
     setError('');
@@ -137,7 +140,7 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
 
       if (user) {
         body.userId = user.id;
-        body.status = user.status; // Keep existing status
+        // body.status is already included in ...formData
       }
       // Password is no longer needed as we use inviteUserByEmail
 
@@ -161,7 +164,8 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           email: '',
           first_name: '',
           last_name: '',
-          role: 'officer'
+          role: 'officer',
+          status: 'ACTIVE'
         });
         alert(`Invitation email sent to ${formData.email}`);
       }
@@ -183,14 +187,43 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           <h2 className="text-2xl font-bold text-midnightNavy">
             {user ? 'Edit User' : 'Add New User'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-royal hover:text-blue"
-          >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="flex flex-col items-center gap-1 mr-2">
+                <span className="text-midnightNavy font-medium text-xs uppercase tracking-wider">Status</span>
+                <button
+                  onClick={() => handleChange('status', formData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                  className={`relative w-24 h-7 rounded-full transition-colors duration-200 ease-in-out flex items-center ${formData.status === 'ACTIVE' ? 'bg-green-600' : 'bg-gray'
+                    }`}
+                >
+                  <span
+                    className={`absolute left-2 text-[10px] font-bold text-white transition-opacity duration-200 ${formData.status === 'ACTIVE' ? 'opacity-100' : 'opacity-0'
+                      }`}
+                  >
+                    ACTIVE
+                  </span>
+                  <span
+                    className={`absolute right-2 text-[10px] font-bold text-white transition-opacity duration-200 ${formData.status === 'ACTIVE' ? 'opacity-0' : 'opacity-100'
+                      }`}
+                  >
+                    INACTIVE
+                  </span>
+                  <div
+                    className={`absolute left-1 w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${formData.status === 'ACTIVE' ? 'translate-x-[4.25rem]' : 'translate-x-0'
+                      }`}
+                  />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="text-royal hover:text-blue"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Form content */}
@@ -280,24 +313,16 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
               {user && (
                 <button
                   onClick={handleResendInvite}
-                  disabled={isResending || !inviteStatus.checked || inviteStatus.isConfirmed}
-                  className={`text-sm font-medium transition-colors ${inviteStatus.isConfirmed
-                    ? 'text-gray-400 cursor-not-allowed'
-                    : 'text-blue-600 hover:text-blue-800'
-                    }`}
-                  title={inviteStatus.isConfirmed ? 'User has already accepted the invitation' : 'Resend invitation email'}
+                  disabled={isResending}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-green-400"
+                  title="Resend invitation email"
                 >
-                  {isResending ? 'Sending...' : (inviteStatus.isConfirmed ? 'Invitation Accepted' : 'Resend Invitation')}
+                  {isResending ? 'Sending...' : 'Resend Invitation'}
                 </button>
               )}
             </div>
             <div className="flex gap-4">
-              <button
-                onClick={onClose}
-                className="px-8 py-3 bg-soft text-coal rounded-lg font-semibold hover:bg-gray-400 transition"
-              >
-                Cancel
-              </button>
+
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
