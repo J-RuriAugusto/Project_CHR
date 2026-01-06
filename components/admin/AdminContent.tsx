@@ -30,9 +30,13 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Editing state
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
   // New state for bulk actions
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Search filtering
   const searchFilteredUsers = users.filter(user => {
@@ -90,6 +94,26 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
     }
   };
 
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setIsAddUserModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddUserModalOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <div className="h-screen flex bg-gray-50">
       {/* LEFT COLUMN - Sidebar */}
@@ -103,15 +127,24 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
         </div>
 
         {/* Logout button at bottom */}
-        <form action={signOut} className="pt-4 border-t">
+        {/* Logout button at bottom */}
+        <div className="pt-4 border-t">
           <button
-            type="submit"
-            className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className={`flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition ${isLoggingOut ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
           >
-            <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
-            <span>Logout</span>
+            {isLoggingOut ? (
+              <span>Logging out...</span>
+            ) : (
+              <>
+                <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
+                <span>Logout</span>
+              </>
+            )}
           </button>
-        </form>
+        </div>
       </aside>
 
       {/* MIDDLE COLUMN - Main Content */}
@@ -175,8 +208,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                 onClick={() => handleBulkStatusUpdate('ACTIVE')}
                 disabled={isBulkUpdating || selectedRows.length === 0}
                 className={`px-4 py-0.5 rounded-full text-sm font-semibold border border-charcoal transition ${isBulkUpdating || selectedRows.length === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-charcoal hover:bg-gray-50'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-charcoal hover:bg-gray-50'
                   }`}
               >
                 Mark as Active
@@ -185,8 +218,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
                 onClick={() => handleBulkStatusUpdate('INACTIVE')}
                 disabled={isBulkUpdating || selectedRows.length === 0}
                 className={`px-2 py-0.5 rounded-full text-sm font-semibold border border-charcoal transition ${isBulkUpdating || selectedRows.length === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-charcoal hover:bg-gray-50'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-charcoal hover:bg-gray-50'
                   }`}
               >
                 Mark as Inactive
@@ -227,7 +260,10 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
               </div>
 
               <button
-                onClick={() => setIsAddUserModalOpen(true)}
+                onClick={() => {
+                  setEditingUser(null);
+                  setIsAddUserModalOpen(true);
+                }}
                 className="px-4 py-2 bg-blue text-white rounded-md text-sm font-semibold hover:bg-highlight flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,6 +282,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
               filterStatus={filterStatus}
               selectedRows={selectedRows}
               onSelectionChange={setSelectedRows}
+              onEditUser={handleEditUser}
             />
           </div>
         </div>
@@ -254,7 +291,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
       {/* Add User Modal */}
       <AddUserModal
         isOpen={isAddUserModalOpen}
-        onClose={() => setIsAddUserModalOpen(false)}
+        onClose={handleCloseModal}
+        user={editingUser}
       />
     </div>
   );

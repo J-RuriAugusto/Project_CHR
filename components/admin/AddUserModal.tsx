@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  status: string;
+}
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  user?: User | null;
 }
 
-export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
+export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
@@ -16,6 +26,26 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Update form data when user prop changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role
+      });
+    } else {
+      setFormData({
+        email: '',
+        first_name: '',
+        last_name: '',
+        role: 'officer'
+      });
+    }
+    setError('');
+  }, [user, isOpen]);
 
   const roles = [
     { value: 'admin', label: 'Admin' },
@@ -41,34 +71,47 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
     setError('');
 
     try {
-      const response = await fetch('/api/admin/create-user', {
-        method: 'POST',
+      const url = user ? '/api/admin/update-user' : '/api/admin/create-user';
+      const method = user ? 'PUT' : 'POST';
+
+      const body: any = {
+        ...formData,
+      };
+
+      if (user) {
+        body.userId = user.id;
+        body.status = user.status; // Keep existing status
+      } else {
+        body.password = 'p@ssw0rD'; // Default password for new users
+      }
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          password: 'p@ssw0rD'
-        }),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create user');
+        throw new Error(result.error || `Failed to ${user ? 'update' : 'create'} user`);
       }
 
       // Reset form and close modal
-      setFormData({
-        email: '',
-        first_name: '',
-        last_name: '',
-        role: 'officer'
-      });
+      if (!user) {
+        setFormData({
+          email: '',
+          first_name: '',
+          last_name: '',
+          role: 'officer'
+        });
+      }
       onClose();
       window.location.reload();
     } catch (error: any) {
-      setError(error.message || 'Failed to create user');
+      setError(error.message || `Failed to ${user ? 'update' : 'create'} user`);
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +121,14 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-3xl w-full max-w-xl relative">
-        <div className="bg-sky rounded-t-3xl p-10 relative">
+      <div className="bg-white rounded-3xl w-full max-w-md relative">
+        <div className="bg-sky rounded-t-3xl p-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-midnightNavy">
+            {user ? 'Edit User' : 'Add New User'}
+          </h2>
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 text-royal hover:text-blue"
+            className="text-royal hover:text-blue"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -91,7 +137,7 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
         </div>
 
         {/* Form content */}
-        <div className="p-8 space-y-6 bg-snowWhite rounded-b-3xl">
+        <div className="p-6 space-y-4 bg-snowWhite rounded-b-3xl">
           {error && (
             <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-3 rounded">
               {error}
@@ -149,9 +195,8 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
               <select
                 value={formData.role}
                 onChange={(e) => handleChange("role", e.target.value)}
-                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-coal appearance-none cursor-pointer ${
-                  !formData.role ? "text-gray-400" : ""
-                }`}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-coal appearance-none cursor-pointer ${!formData.role ? "text-gray-400" : ""
+                  }`}
               >
                 <option value="" disabled hidden>
                   Assign them to their designated role...
@@ -185,7 +230,7 @@ export default function AddUserModal({ isOpen, onClose }: AddUserModalProps) {
               disabled={isLoading}
               className="px-8 py-3 bg-royalAzure text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-300"
             >
-              {isLoading ? 'Adding...' : 'Add User'}
+              {isLoading ? 'Saving...' : (user ? 'Save Changes' : 'Add User')}
             </button>
           </div>
         </div>

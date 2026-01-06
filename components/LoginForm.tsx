@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
@@ -19,7 +19,14 @@ export default function LoginForm({
 }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
+
+  useEffect(() => {
+    if (message) {
+      setIsLoading(false);
+    }
+  }, [message]);
 
   const handleGoogleSignIn = async () => {
     await supabase.auth.signInWithOAuth({
@@ -30,10 +37,24 @@ export default function LoginForm({
     });
   };
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      await signInAction(formData);
+    } catch (error) {
+      console.error('Login failed:', error);
+      setIsLoading(false);
+    }
+    // Note: We don't set isLoading(false) on success because the page will redirect
+  };
+
   return (
     <div className="space-y-4 w-full">
       {/* Email/Password Form */}
-      <form action={signInAction} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}
         <div>
           <label
@@ -92,11 +113,10 @@ export default function LoginForm({
                 className="sr-only"
               />
               <div
-                className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                  rememberMe
-                    ? 'bg-dustyBlue border-dustyBlue'
-                    : 'border-midnightNavy bg-white'
-                }`}
+                className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${rememberMe
+                  ? 'bg-dustyBlue border-dustyBlue'
+                  : 'border-midnightNavy bg-white'
+                  }`}
               >
                 {rememberMe && (
                   <svg
@@ -126,9 +146,11 @@ export default function LoginForm({
         {/* Login Button */}
         <button
           type="submit"
-          className="w-full bg-midnightNavy text-white py-2 rounded-full hover:bg-[#153568] transition text-sm font-semibold"
+          disabled={isLoading}
+          className={`w-full bg-midnightNavy text-white py-2 rounded-full hover:bg-[#153568] transition text-sm font-semibold ${isLoading ? 'opacity-75 cursor-not-allowed' : ''
+            }`}
         >
-          Log In
+          {isLoading ? 'Logging in...' : 'Log In'}
         </button>
       </form>
 
