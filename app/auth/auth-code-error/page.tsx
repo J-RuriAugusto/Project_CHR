@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function AuthCodeError() {
+function ErrorContent() {
     const searchParams = useSearchParams();
     const errorCode = searchParams.get('error_code');
     const errorDescription = searchParams.get('error_description');
@@ -36,5 +37,13 @@ export default function AuthCodeError() {
                 </Link>
             </div>
         </div>
+    );
+}
+
+export default function AuthCodeError() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+            <ErrorContent />
+        </Suspense>
     );
 }
