@@ -81,10 +81,8 @@ export default async function ResetPassword({
       );
     }
 
-    // Success! Redirect to login.
-    redirect(
-      `/login?message=Your Password has been reset successfully. Sign in.`
-    );
+    // Success! Redirect to home/dashboard logic.
+    redirect('/');
   };
 
   return (
