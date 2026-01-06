@@ -38,7 +38,17 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.redirect(`${origin}${next}`);
       }
+    } else {
+      // If code exchange fails, pass the error
+      return NextResponse.redirect(`${origin}/auth/auth-code-error?error_code=exchange_error&error_description=${encodeURIComponent(error.message)}`);
     }
+  }
+
+  // Check if Supabase passed an error in params (e.g. invalid redirect)
+  const errorCode = searchParams.get('error_code');
+  const errorDesc = searchParams.get('error_description');
+  if (errorCode || errorDesc) {
+    return NextResponse.redirect(`${origin}/auth/auth-code-error?error_code=${errorCode}&error_description=${errorDesc ? encodeURIComponent(errorDesc) : ''}`);
   }
 
   // return the user to an error page with instructions
