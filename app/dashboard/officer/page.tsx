@@ -6,6 +6,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import { headers } from "next/headers";
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
+import LogoutButton from '@/components/LogoutButton';
 import { getDashboardStats, getUrgentCases } from '@/lib/actions/dashboard-stats';
 import UrgentCases from '@/components/dashboard/UrgentCases';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
@@ -26,7 +27,7 @@ export default async function OfficerDashboard() {
     // Fetch user data from the users table
     const { data: userData, error } = await supabase
         .from('users')
-        .select('id, first_name, last_name, role')
+        .select('id, first_name, last_name, role, profile_picture_url')
         .eq('email', session.user.email)
         .single();
 
@@ -63,15 +64,10 @@ export default async function OfficerDashboard() {
                 <Sidebar currentPath={currentPath} role="officer" />
 
                 {/* Logout button at bottom */}
-                <form action={signOut} className="pt-4 border-t">
-                    <button
-                        type="submit"
-                        className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
-                    >
-                        <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
-                        <span>Logout</span>
-                    </button>
-                </form>
+                {/* Logout button at bottom */}
+                <div className="pt-4 border-t">
+                    <LogoutButton signOut={signOut} />
+                </div>
             </aside>
 
             {/* MIDDLE COLUMN */}

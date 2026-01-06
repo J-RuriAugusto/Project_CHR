@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import UserManagementTable from './UserManagementTable';
 import AddUserModal from './AddUserModal';
 
@@ -18,6 +19,7 @@ interface AdminContentProps {
     first_name: string;
     last_name: string;
     role: string;
+    profile_picture_url?: string;
   };
   signOut: () => Promise<void>;
   users: User[];
@@ -182,18 +184,25 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="font-bold text-midnightNavy">
-                  {userData.first_name} {userData.last_name}
-                </p>
-                <p className="text-sm text-midnightNavy capitalize">{userData.role}</p>
-              </div>
+              <Link href="/dashboard/profile" className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer">
+                <div className="text-right">
+                  <p className="font-bold text-midnightNavy">
+                    {userData.first_name} {userData.last_name}
+                  </p>
+                  <p className="text-sm text-midnightNavy capitalize">{userData.role}</p>
+                </div>
 
-              <img
-                src="/icon11.png"
-                alt="User Avatar"
-                className="w-12 h-12 rounded-full border border-gray-200"
-              />
+                <img
+                  src={userData.profile_picture_url || "/icon11.png"}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/icon11.png';
+                  }}
+                  alt="User Avatar"
+                  className="w-12 h-12 rounded-full border border-gray-200 object-cover"
+                />
+              </Link>
             </div>
           </div>
         </div>

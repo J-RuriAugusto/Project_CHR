@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
+import LogoutButton from '@/components/LogoutButton';
 
 export default async function RegionalDirectorDashboard() {
   const supabase = await createClient();
@@ -44,15 +45,10 @@ export default async function RegionalDirectorDashboard() {
         <Sidebar currentPath={currentPath} />
 
         {/* Logout button at bottom */}
-        <form action={signOut} className="pt-4 border-t">
-          <button
-            type="submit"
-            className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
-          >
-            <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </form>
+        {/* Logout button at bottom */}
+        <div className="pt-4 border-t">
+          <LogoutButton signOut={signOut} />
+        </div>
       </aside>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DashboardHeader userData={userData} />

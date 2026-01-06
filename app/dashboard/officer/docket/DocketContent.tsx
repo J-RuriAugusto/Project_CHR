@@ -10,6 +10,7 @@ import DocketTable from './DocketTable';
 import DocketDetailsModal from "@/components/DocketViewModal";
 import Sidebar from '@/components/Sidebar';
 import DocketHeader from '@/components/dashboard/DocketHeader';
+import LogoutButton from '@/components/LogoutButton';
 
 interface DocketContentProps {
     userData: {
@@ -17,6 +18,7 @@ interface DocketContentProps {
         first_name: string;
         last_name: string;
         role: string;
+        profile_picture_url?: string;
     };
     signOut: () => Promise<void>;
     users: any[];
@@ -115,15 +117,10 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 <Sidebar currentPath={currentPath} role="officer" />
 
                 {/* Logout button at bottom */}
-                <form action={signOut} className="pt-4 border-t">
-                    <button
-                        type="submit"
-                        className="flex items-center justify-center space-x-2 w-full text-white hover:text-paleSky py-2 px-4 rounded-md text-lg font-semibold transition"
-                    >
-                        <img src="/icon8.png" alt="Logout" className="w-5 h-5" />
-                        <span>Logout</span>
-                    </button>
-                </form>
+                {/* Logout button at bottom */}
+                <div className="pt-4 border-t">
+                    <LogoutButton signOut={signOut} />
+                </div>
             </aside>
 
             {/* MIDDLE COLUMN */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import NotificationModal from './NotificationModal';
 
 interface DashboardHeaderProps {
@@ -8,14 +9,16 @@ interface DashboardHeaderProps {
     first_name: string;
     last_name: string;
     role: string;
+    profile_picture_url?: string;
   };
 }
 
 export default function DashboardHeader({ userData }: DashboardHeaderProps) {
+  const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
-  
+
   return (
     <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
       <div>
@@ -29,14 +32,13 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
 
       {/* USER INFO */}
       <div className="flex items-center gap-4">
-        <div 
+        <div
           className="relative flex items-center"
           onMouseEnter={() => setIsSearchOpen(true)}
           onMouseLeave={() => setIsSearchOpen(false)}
         >
-          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isSearchOpen ? 'w-60 opacity-100' : 'w-0 opacity-0'
-          }`}>
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'w-60 opacity-100' : 'w-0 opacity-0'
+            }`}>
             <input
               type="text"
               placeholder="Search case by docket number or key..."
@@ -50,7 +52,7 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
           </button>
         </div>
 
-        <button 
+        <button
           className="relative p-2"
           onClick={() => setShowNotifications(!showNotifications)}
         >
@@ -58,13 +60,16 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
         </button>
 
         {showNotifications && (
-          <NotificationModal 
-            isOpen={showNotifications} 
-            onClose={() => setShowNotifications(false)} 
+          <NotificationModal
+            isOpen={showNotifications}
+            onClose={() => setShowNotifications(false)}
           />
         )}
 
-        <div className="flex items-center gap-3">
+        <div
+          onClick={() => router.push('/dashboard/profile')}
+          className="flex items-center gap-3 hover:opacity-80 transition cursor-pointer"
+        >
           <div className="text-right">
             <p className="font-bold text-midnightNavy">
               {userData.first_name} {userData.last_name}
@@ -73,9 +78,14 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
           </div>
 
           <img
-            src="/icon11.png"
+            src={userData.profile_picture_url || "/icon11.png"}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/icon11.png';
+            }}
             alt="User Avatar"
-            className="w-12 h-12 rounded-full border border-gray-200"
+            className="w-12 h-12 rounded-full border border-gray-200 object-cover"
           />
         </div>
       </div>

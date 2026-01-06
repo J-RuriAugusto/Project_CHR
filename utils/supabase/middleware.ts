@@ -104,7 +104,8 @@ export const updateSession = async (request: NextRequest) => {
         const allowedPath = rolePaths[role];
 
         // If the user is in a dashboard route but not their allowed one
-        if (allowedPath && !path.startsWith(allowedPath)) {
+        // Allow access to /dashboard/profile for all users
+        if (allowedPath && !path.startsWith(allowedPath) && path !== '/dashboard/profile') {
           // Avoid redirect loop if they are already being redirected or on the correct path
           if (path !== allowedPath) {
             return NextResponse.redirect(new URL(allowedPath, request.url));
