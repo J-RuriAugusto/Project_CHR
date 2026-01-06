@@ -35,7 +35,7 @@ export async function POST(request: Request) {
           last_name,
           role
         },
-        redirectTo: `${new URL(request.url).origin}/auth/callback?next=/reset-password`
+        redirectTo: `${new URL(request.url).origin}/auth/confirm`
       }
     );
 
