@@ -16,9 +16,26 @@ export default async function ResetPassword({
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (session) {
-    return redirect('/');
-  }
+  // Allow logged-in users to access this page if they have a code,
+  // or if they are just doing a manual reset.
+  // We do NOT redirect if session exists, because they might have clicked the link while logged in.
+
+  // If there is a code in URL, we need to defer the exchange to the client or server action?
+  // Actually, resetPasswordForEmail link contains a `code`.
+  // Supabase Auth usually handles the code exchange in a callback route OR we must handle it.
+  // The standard flow is: link -> /auth/callback?code=... -> exchange -> redirect to /reset-password
+  // IF the link points directly to /reset-password?code=..., then we must handle it.
+
+  // Checking typical valid logic:
+  // If this page is reached with a valid session, let them reset.
+  // If not valid session but has code, we might need to exchange it first?
+  // NextJS Supabase helpers usually suggest an auth callback route.
+
+  // Current Issue:
+  // implementation had: if (session) return redirect('/');
+  // This explicitly kicks them out if they are logged in.
+
+  // FIX: Just remove that block.
 
   const resetPassword = async (formData: FormData) => {
     'use server';
@@ -33,29 +50,38 @@ export default async function ResetPassword({
       );
     }
 
-    if (searchParams.code) {
-      const { error } = await supabase.auth.exchangeCodeForSession(
-        searchParams.code
-      );
+    // Capture the code from searchParams
+    const code = searchParams.code;
 
-      if (error) {
-        return redirect(
-          `/reset-password?message=Unable to reset Password. Link expired!`
-        );
+    if (code) {
+      // If we have a code, we try to exchange it for a session first
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (exchangeError) {
+        console.error("Exchange Error:", exchangeError);
+        return redirect(`/reset-password?message=Invalid or expired reset link.`);
+      }
+    } else {
+      // If NO CODE, we must ensure the user is already logged in
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        return redirect('/');
       }
     }
 
-    const { error } = await supabase.auth.updateUser({
+    // Now update the password
+    const { error: updateError } = await supabase.auth.updateUser({
       password,
     });
 
-    if (error) {
-      console.log(error);
+    if (updateError) {
+      console.error('Update Error:', updateError);
       return redirect(
-        `/reset-password?message=Unable to reset Password. Try again!`
+        `/reset-password?message=Unable to reset Password. Try again!&code=${code || ''}`
       );
     }
 
+    // Success! Redirect to login.
     redirect(
       `/login?message=Your Password has been reset successfully. Sign in.`
     );
