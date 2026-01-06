@@ -81,9 +81,8 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
       if (user) {
         body.userId = user.id;
         body.status = user.status; // Keep existing status
-      } else {
-        body.password = 'p@ssw0rD'; // Default password for new users
       }
+      // Password is no longer needed as we use inviteUserByEmail
 
       const response = await fetch(url, {
         method,
@@ -107,6 +106,7 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           last_name: '',
           role: 'officer'
         });
+        alert(`Invitation email sent to ${formData.email}`);
       }
       onClose();
       window.location.reload();
