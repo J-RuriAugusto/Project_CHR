@@ -26,6 +26,11 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<{ checked: boolean; isConfirmed: boolean }>({
+    checked: false,
+    isConfirmed: false
+  });
 
   // Update form data when user prop changes
   useEffect(() => {
@@ -45,7 +50,59 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
       });
     }
     setError('');
+
+    // Check invite status if user exists
+    if (user) {
+      checkInviteStatus(user.id);
+    } else {
+      setInviteStatus({ checked: false, isConfirmed: false });
+    }
   }, [user, isOpen]);
+
+  const checkInviteStatus = async (userId: string) => {
+    try {
+      const response = await fetch('/api/admin/check-invite-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setInviteStatus({ checked: true, isConfirmed: data.isConfirmed });
+      }
+    } catch (err) {
+      console.error('Failed to check invite status', err);
+    }
+  };
+
+  const handleResendInvite = async () => {
+    if (!user?.email) return;
+
+    setIsResending(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/admin/resend-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend invitation');
+      }
+
+      alert(`Invitation resent to ${user.email}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend invitation');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const roles = [
     { value: 'admin', label: 'Admin' },
@@ -218,20 +275,37 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-4 pt-4">
-            <button
-              onClick={onClose}
-              className="px-8 py-3 bg-soft text-coal rounded-lg font-semibold hover:bg-gray-400 transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="px-8 py-3 bg-royalAzure text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-300"
-            >
-              {isLoading ? 'Saving...' : (user ? 'Save Changes' : 'Add User')}
-            </button>
+          <div className="flex justify-between items-center pt-4">
+            <div>
+              {user && (
+                <button
+                  onClick={handleResendInvite}
+                  disabled={isResending || !inviteStatus.checked || inviteStatus.isConfirmed}
+                  className={`text-sm font-medium transition-colors ${inviteStatus.isConfirmed
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-blue-600 hover:text-blue-800'
+                    }`}
+                  title={inviteStatus.isConfirmed ? 'User has already accepted the invitation' : 'Resend invitation email'}
+                >
+                  {isResending ? 'Sending...' : (inviteStatus.isConfirmed ? 'Invitation Accepted' : 'Resend Invitation')}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={onClose}
+                className="px-8 py-3 bg-soft text-coal rounded-lg font-semibold hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="px-8 py-3 bg-royalAzure text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-blue-300"
+              >
+                {isLoading ? 'Saving...' : (user ? 'Save Changes' : 'Add User')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
