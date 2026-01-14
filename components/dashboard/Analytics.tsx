@@ -140,7 +140,7 @@ export function CaseTypeChart({ data }: CaseTypeChartProps) {
     return (
         <div className="w-full max-w-sm mx-auto">
             <h3 className="text-sm font-regular text-mutedSteelBlue mb-2 text-center">
-                Case Breakdown By Type
+                Active Cases Breakdown By Type
             </h3>
             <div className="grid grid-cols-[170px_1fr] gap-4 pt-4">
                 <div className="flex justify-center items-start">

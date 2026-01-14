@@ -14,7 +14,7 @@ import { createClient } from '@/utils/supabase/server';
 export async function getCaseTypeBreakdown(officerId?: string): Promise<CaseTypeBreakdown[]> {
     const supabase = await createClient();
 
-    // Start building the query
+    // Start building the query - exclude completed cases
     let query = supabase
         .from('dockets')
         .select(`
@@ -22,7 +22,8 @@ export async function getCaseTypeBreakdown(officerId?: string): Promise<CaseType
             request_types (
                 name
             )${officerId ? ', docket_staff!inner(user_id)' : ''}
-        `);
+        `)
+        .neq('status', 'COMPLETED');
 
     // Apply officer filter if provided
     if (officerId) {
@@ -77,14 +78,14 @@ export interface CaseAgeingOverview {
 export async function getCaseAgeingOverview(officerId?: string): Promise<CaseAgeingOverview[]> {
     const supabase = await createClient();
 
-    // Start building the query
+    // Start building the query - include PENDING and FOR REVIEW (exclude only COMPLETED)
     let query = supabase
         .from('dockets')
         .select(`
             date_received
             ${officerId ? ', docket_staff!inner(user_id)' : ''}
         `)
-        .eq('status', 'PENDING');
+        .in('status', ['PENDING', 'FOR REVIEW']);
 
     // Apply officer filter if provided
     if (officerId) {
