@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
@@ -27,19 +27,81 @@ interface DocketContentProps {
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
     const searchParams = useSearchParams();
-    const initialStatus = searchParams.get('status') || 'all';
+    const initialStatus = searchParams.get('status');
 
 
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState(initialStatus);
-    const [filterType, setFilterType] = useState('all');
+    // Multi-select filter arrays
+    const [filterStatuses, setFilterStatuses] = useState<string[]>(initialStatus ? [initialStatus] : []);
+    const [filterTypes, setFilterTypes] = useState<string[]>([]);
+    // Date range filter
+    const [dateRangeStart, setDateRangeStart] = useState<string>('');
+    const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
+    // Dropdown open states
+    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+    const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+    const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
     const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 100;
+
+    // Refs for click-outside detection
+    const statusDropdownRef = useRef<HTMLDivElement>(null);
+    const typeDropdownRef = useRef<HTMLDivElement>(null);
+    const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+                setIsStatusDropdownOpen(false);
+            }
+            if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
+                setIsTypeDropdownOpen(false);
+            }
+            if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target as Node)) {
+                setIsDateDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const STATUS_OPTIONS = ['Overdue', 'Urgent', 'Due', 'Active', 'Completed', 'For Review'];
+
+    // Toggle status filter
+    const toggleStatusFilter = (status: string) => {
+        setFilterStatuses(prev =>
+            prev.includes(status)
+                ? prev.filter(s => s !== status)
+                : [...prev, status]
+        );
+    };
+
+    // Toggle type filter
+    const toggleTypeFilter = (type: string) => {
+        setFilterTypes(prev =>
+            prev.includes(type)
+                ? prev.filter(t => t !== type)
+                : [...prev, type]
+        );
+    };
+
+    // Clear all filters
+    const clearFilters = () => {
+        setFilterStatuses([]);
+        setFilterTypes([]);
+        setDateRangeStart('');
+        setDateRangeEnd('');
+    };
+
+    // Check if any filters are active
+    const hasActiveFilters = filterStatuses.length > 0 || filterTypes.length > 0 || dateRangeStart !== '' || dateRangeEnd !== '';
 
     // Fetch dockets on component mount
     useEffect(() => {
@@ -98,9 +160,29 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const currentPath = usePathname() || "/";
 
     const filteredDockets = dockets.filter(docket => {
-        const statusMatch = filterStatus === 'all' || docket.status === filterStatus;
-        const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
-        return statusMatch && typeMatch;
+        const statusMatch = filterStatuses.length === 0 || filterStatuses.includes(docket.status);
+        const typeMatch = filterTypes.length === 0 || filterTypes.includes(docket.typeOfRequest);
+
+        // Date range filter
+        let dateMatch = true;
+        if (dateRangeStart || dateRangeEnd) {
+            const docketDate = docket.dateReceived ? new Date(docket.dateReceived) : null;
+            if (docketDate) {
+                if (dateRangeStart) {
+                    const startDate = new Date(dateRangeStart);
+                    if (docketDate < startDate) dateMatch = false;
+                }
+                if (dateRangeEnd) {
+                    const endDate = new Date(dateRangeEnd);
+                    endDate.setHours(23, 59, 59, 999);
+                    if (docketDate > endDate) dateMatch = false;
+                }
+            } else {
+                dateMatch = false;
+            }
+        }
+
+        return statusMatch && typeMatch && dateMatch;
     });
 
     // Pagination calculations
@@ -112,7 +194,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [filterStatus, filterType]);
+    }, [filterStatuses, filterTypes, dateRangeStart, dateRangeEnd]);
 
     return (
         <div className="h-screen flex bg-gray-50">
@@ -143,51 +225,134 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                 <div className="mt-6">
                     {/* Controls Bar */}
                     <div className="flex items-center justify-between mb-4 px-6">
-                        <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredDockets.length}</h2>
                         <div className="flex items-center gap-3">
-                            {/* STATUS FILTER */}
-                            <div className="relative w-32">
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal hover:bg-gray-50 appearance-none pr-8 cursor-pointer truncate"
+                            <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredDockets.length}</h2>
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium mt-1"
                                 >
-                                    <option value="" disabled hidden>Status</option>
-                                    <option value="Overdue">Overdue</option>
-                                    <option value="Urgent">Urgent</option>
-                                    <option value="Due">Due</option>
-                                    <option value="Active">Active</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="For Review">For Review</option>
-
-
-                                    <option value="all">All Status</option>
-                                </select>
-
-                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {/* STATUS FILTER DROPDOWN */}
+                            <div className="relative" ref={statusDropdownRef}>
+                                <button
+                                    onClick={() => {
+                                        setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                                        setIsTypeDropdownOpen(false);
+                                        setIsDateDropdownOpen(false);
+                                    }}
+                                    className="px-4 py-1 rounded-full bg-white text-sm font-semibold text-charcoal hover:bg-gray-50 flex items-center gap-2 border border-gray-200"
+                                >
+                                    Status {filterStatuses.length > 0 && `(${filterStatuses.length})`}
+                                    <svg className="w-4 h-4 text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {isStatusDropdownOpen && (
+                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[160px]">
+                                        {STATUS_OPTIONS.map((status) => (
+                                            <label
+                                                key={status}
+                                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filterStatuses.includes(status)}
+                                                    onChange={() => toggleStatusFilter(status)}
+                                                    className="mr-2 h-4 w-4 rounded border-gray-300"
+                                                />
+                                                <span className="text-charcoal">{status}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* TYPE FILTER */}
-                            <div className="relative w-32">
-                                <select
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                    className="w-full px-2 py-0.5 rounded-full bg-white text-center text-sm font-semibold text-charcoal hover:bg-gray-50 appearance-none pr-8 cursor-pointer truncate"
+                            {/* TYPE FILTER DROPDOWN */}
+                            <div className="relative" ref={typeDropdownRef}>
+                                <button
+                                    onClick={() => {
+                                        setIsTypeDropdownOpen(!isTypeDropdownOpen);
+                                        setIsStatusDropdownOpen(false);
+                                        setIsDateDropdownOpen(false);
+                                    }}
+                                    className="px-4 py-1 rounded-full bg-white text-sm font-semibold text-charcoal hover:bg-gray-50 flex items-center gap-2 border border-gray-200"
                                 >
-                                    <option value="" disabled hidden>Type</option>
-                                    {lookups.requestTypes.map((type) => (
-                                        <option key={type.id} value={type.name}>
-                                            {type.name}
-                                        </option>
-                                    ))}
-                                    <option value="all">All Requests</option>
-                                </select>
+                                    Request Type {filterTypes.length > 0 && `(${filterTypes.length})`}
+                                    <svg className="w-4 h-4 text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {isTypeDropdownOpen && (
+                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-[200px]">
+                                        {lookups.requestTypes.map((type) => (
+                                            <label
+                                                key={type.id}
+                                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filterTypes.includes(type.name)}
+                                                    onChange={() => toggleTypeFilter(type.name)}
+                                                    className="mr-2 h-4 w-4 rounded border-gray-300"
+                                                />
+                                                <span className="text-charcoal">{type.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                                <svg className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                            {/* DATE RECEIVED FILTER DROPDOWN */}
+                            <div className="relative" ref={dateDropdownRef}>
+                                <button
+                                    onClick={() => {
+                                        setIsDateDropdownOpen(!isDateDropdownOpen);
+                                        setIsStatusDropdownOpen(false);
+                                        setIsTypeDropdownOpen(false);
+                                    }}
+                                    className="px-4 py-1 rounded-full bg-white text-sm font-semibold text-charcoal hover:bg-gray-50 flex items-center gap-2 border border-gray-200"
+                                >
+                                    Date Received {(dateRangeStart || dateRangeEnd) && '(filtered)'}
+                                    <svg className="w-4 h-4 text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {isDateDropdownOpen && (
+                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-4 min-w-[280px]">
+                                        <div className="mb-3">
+                                            <label className="block text-sm font-medium text-charcoal mb-1">Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={dateRangeStart}
+                                                onChange={(e) => setDateRangeStart(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="block text-sm font-medium text-charcoal mb-1">End Date</label>
+                                            <input
+                                                type="date"
+                                                value={dateRangeEnd}
+                                                onChange={(e) => setDateRangeEnd(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setDateRangeStart('');
+                                                setDateRangeEnd('');
+                                            }}
+                                            className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                                        >
+                                            Clear Dates
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
 

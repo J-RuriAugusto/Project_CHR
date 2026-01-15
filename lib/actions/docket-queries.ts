@@ -12,6 +12,7 @@ export interface DocketListItem {
     daysTillDeadline: number;
     lastUpdated: string;
     deadline: Date;
+    dateReceived: string;
 }
 
 /**
@@ -25,6 +26,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
         .select(`
             id,
             docket_number,
+            date_received,
             deadline,
             updated_at,
             status,
@@ -56,6 +58,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             .select(`
                 id,
                 docket_number,
+                date_received,
                 deadline,
                 updated_at,
                 status,
@@ -126,7 +129,8 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             assignedTo,
             daysTillDeadline,
             lastUpdated: new Date(docket.updated_at).toLocaleDateString('en-US'),
-            deadline: deadlineDate
+            deadline: deadlineDate,
+            dateReceived: docket.date_received
         };
     });
 }
