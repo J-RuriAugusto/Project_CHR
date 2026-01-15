@@ -875,8 +875,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
-                        ? `${selectedSectors.length} selected`
-                        : 'Pick the Sector...'}
+                        ? `Sector (${selectedSectors.length} applied)`
+                        : 'Sector (0 applied)'}
                 </span>
                 <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </button>
@@ -932,631 +932,641 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         <div>
             {isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
-                        <div className="bg-sky p-4 flex justify-between items-center">
-                            <div>
-                                <label className="block text-graphite text-sm font-semibold mb-1">
-                                    Docket Number
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="CHR-VII-YEAR-NUMBER"
-                                    value={docketNumber}
-                                    onChange={(e) => setDocketNumber(e.target.value)}
-                                    onFocus={handleDocketNumberFocus}
-                                    onBlur={handleDocketNumberBlur}
-                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
-                                    className={`bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                />
-                            </div>
-                            <div className="flex items-center gap-6">
-                                <div className="flex flex-col items-center">
-                                    <label className="block text-graphite text-sm font-semibold mb-1">
-                                        {status === 'Completed' ? 'Date Completed' : 'Days till deadline'}
-                                    </label>
-                                    <div className="flex items-center gap-2">
-                                        {status === 'Completed' ? (
-                                            <>
-                                                <Calendar className="w-6 h-6 text-deepNavy" />
-                                                <span className="text-deepNavy text-xl font-semibold">
-                                                    {updatedAt || 'N/A'}
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <img src="/icon22.png" alt="Time" className="w-6 h-6" />
-                                                <span className="text-deepNavy text-xl font-semibold">
-                                                    {(() => {
-                                                        if (!deadline) return 'N/A';
-                                                        const [month, day, year] = deadline.split('/').map(Number);
-                                                        if (!month || !day || !year) return 'N/A';
-
-                                                        const deadlineDate = new Date(year, month - 1, day);
-                                                        const today = new Date();
-                                                        today.setHours(0, 0, 0, 0);
-
-                                                        const diffTime = deadlineDate.getTime() - today.getTime();
-                                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                                                        if (isNaN(diffDays)) return 'N/A';
-
-                                                        const absDays = Math.abs(diffDays);
-                                                        const dayString = absDays === 1 ? 'day' : 'days';
-                                                        return `${diffDays} ${dayString}`;
-                                                    })()}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-graphite text-sm font-semibold mb-1">
-                                        Status
-                                    </label>
-                                    <select
-                                        value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
-                                        className="bg-white text-midnightNavy rounded-full px-4 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                    >
-                                        <option value="Pending">Pending</option>
-                                        <option value="For Review">For Review</option>
-                                        {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
-                                    </select>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="text-royal hover:text-blue justify-self-end"
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-                        </div>
-
+                    <div className={`rounded-lg flex flex-col bg-white overflow-hidden ${isLoading ? 'w-auto' : 'w-full max-w-4xl max-h-[90vh]'}`}>
                         {isLoading ? (
-                            <div className="p-12 text-center text-midnightNavy">
-                                Loading details...
+                            /* Compact loading state */
+                            <div className="px-12 py-8 flex flex-col items-center justify-center">
+                                {/* Spinner */}
+                                <div className="relative">
+                                    <div className="w-10 h-10 rounded-full border-4 border-gray-200"></div>
+                                    <div className="absolute top-0 left-0 w-10 h-10 rounded-full border-4 border-transparent border-t-royalBlue animate-spin"></div>
+                                </div>
+                                {/* Loading text */}
+                                <p className="mt-3 text-midnightNavy text-sm font-medium animate-pulse">
+                                    Loading docket details...
+                                </p>
                             </div>
                         ) : (
-                            <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
-                                {!isEditable && currentUserRole !== 'officer' && (
-                                    <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm font-medium">
-                                        Non-pending status cannot be edited. Please change the status to Pending to make changes.
+                            /* Full modal content - only shown when data is ready */
+                            <>
+                                <div className="bg-sky p-4 flex justify-between items-center">
+                                    <div>
+                                        <label className="block text-graphite text-sm font-semibold mb-1">
+                                            Docket Number
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="CHR-VII-YEAR-NUMBER"
+                                            value={docketNumber}
+                                            onChange={(e) => setDocketNumber(e.target.value)}
+                                            onFocus={handleDocketNumberFocus}
+                                            onBlur={handleDocketNumberBlur}
+                                            disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                            className={`bg-white text-midnightNavy rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        />
                                     </div>
-                                )}
-                                <div className="flex flex-col gap-6 mb-6">
-                                    {/* Row 1: Date Received, Type of Request, Category */}
-                                    <div className="grid grid-cols-3 gap-6">
-                                        {/* Date Received */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Date Received
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col items-center">
+                                            <label className="block text-graphite text-sm font-semibold mb-1">
+                                                {status === 'Completed' ? 'Date Completed' : 'Days till deadline'}
                                             </label>
-                                            <div className="relative flex items-center gap-2">
+                                            <div className="flex items-center gap-2">
+                                                {status === 'Completed' ? (
+                                                    <>
+                                                        <Calendar className="w-6 h-6 text-deepNavy" />
+                                                        <span className="text-deepNavy text-xl font-semibold">
+                                                            {updatedAt || 'N/A'}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <img src="/icon22.png" alt="Time" className="w-6 h-6" />
+                                                        <span className="text-deepNavy text-xl font-semibold">
+                                                            {(() => {
+                                                                if (!deadline) return 'N/A';
+                                                                const [month, day, year] = deadline.split('/').map(Number);
+                                                                if (!month || !day || !year) return 'N/A';
+
+                                                                const deadlineDate = new Date(year, month - 1, day);
+                                                                const today = new Date();
+                                                                today.setHours(0, 0, 0, 0);
+
+                                                                const diffTime = deadlineDate.getTime() - today.getTime();
+                                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                                                                if (isNaN(diffDays)) return 'N/A';
+
+                                                                const absDays = Math.abs(diffDays);
+                                                                const dayString = absDays === 1 ? 'day' : 'days';
+                                                                return `${diffDays} ${dayString}`;
+                                                            })()}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-graphite text-sm font-semibold mb-1">
+                                                Status
+                                            </label>
+                                            <select
+                                                value={status}
+                                                onChange={(e) => setStatus(e.target.value)}
+                                                className="bg-white text-midnightNavy rounded-full px-4 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                            >
+                                                <option value="Pending">Pending</option>
+                                                <option value="For Review">For Review</option>
+                                                {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
+                                            </select>
+                                        </div>
+                                        <button
+                                            onClick={onClose}
+                                            className="text-royal hover:text-blue justify-self-end"
+                                        >
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-snowWhite overflow-y-auto flex-1 custom-scrollbar">
+                                    {!isEditable && currentUserRole !== 'officer' && (
+                                        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm font-medium">
+                                            Non-pending status cannot be edited. Please change the status to Pending to make changes.
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col gap-6 mb-6">
+                                        {/* Row 1: Date Received, Type of Request, Category */}
+                                        <div className="grid grid-cols-3 gap-6">
+                                            {/* Date Received */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Date Received
+                                                </label>
+                                                <div className="relative flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="mm/dd/yyyy"
+                                                        value={dateReceived}
+                                                        onChange={handleDateReceivedChange}
+                                                        disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                                        className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowCalendar(!showCalendar);
+                                                            setShowDeadlineCalendar(false);
+                                                        }}
+                                                        disabled={!isEditable || currentUserRole === 'investigation_chief'}
+                                                        className={`text-royal hover:text-ash ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Calendar size={20} />
+                                                    </button>
+                                                    {showCalendar && renderCalendar('received')}
+                                                </div>
+                                            </div>
+
+                                            {/* Type of Request */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Type of Request
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        value={typeOfRequest}
+                                                        onChange={handleTypeOfRequestChange}
+                                                        disabled={!isEditable}
+                                                        style={{ appearance: 'none' }}
+                                                        className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <option value="">Pick the Type of Request...</option>
+                                                        {lookups.requestTypes.map((type) => (
+                                                            <option key={type.id} value={type.id} className='text-black'>
+                                                                {type.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            {/* Category */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
+                                                </label>
                                                 <input
                                                     type="text"
-                                                    placeholder="mm/dd/yyyy"
-                                                    value={dateReceived}
-                                                    onChange={handleDateReceivedChange}
-                                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
-                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                />
-                                                <button
-                                                    onClick={() => {
-                                                        setShowCalendar(!showCalendar);
-                                                        setShowDeadlineCalendar(false);
-                                                    }}
-                                                    disabled={!isEditable || currentUserRole === 'investigation_chief'}
-                                                    className={`text-royal hover:text-ash ${(!isEditable || currentUserRole === 'investigation_chief') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Calendar size={20} />
-                                                </button>
-                                                {showCalendar && renderCalendar('received')}
-                                            </div>
-                                        </div>
-
-                                        {/* Type of Request */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Type of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={typeOfRequest}
-                                                    onChange={handleTypeOfRequestChange}
-                                                    disabled={!isEditable}
-                                                    style={{ appearance: 'none' }}
-                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <option value="">Pick the Type of Request...</option>
-                                                    {lookups.requestTypes.map((type) => (
-                                                        <option key={type.id} value={type.id} className='text-black'>
-                                                            {type.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
-                                        </div>
-
-                                        {/* Category */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Category of Alleged Violation ({categories.filter(c => c.trim() !== '').length})
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Category of Alleged..."
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!categories.includes(newValue)) {
-                                                            setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                    placeholder="Enter Category of Alleged..."
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                            e.preventDefault();
+                                                            const newValue = e.currentTarget.value.trim();
+                                                            if (!categories.includes(newValue)) {
+                                                                setCategories([...categories.filter(c => c !== ''), newValue]);
+                                                            }
+                                                            e.currentTarget.value = '';
                                                         }
-                                                        e.currentTarget.value = '';
-                                                    }
-                                                }}
-                                                disabled={!isEditable}
-                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            />
-                                            {categories.filter(c => c.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {categories.filter(c => c.trim() !== '').map((category, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                        >
-                                                            {category}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCategories(categories.filter((_, i) => i !== index))}
-                                                                disabled={!isEditable}
-                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <XCircle size={14} className="text-royal" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Row 2: Deadline, Mode of Request, Rights */}
-                                    <div className="grid grid-cols-3 gap-6">
-                                        {/* Deadline */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Deadline
-                                            </label>
-                                            <div className="relative flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    placeholder="mm/dd/yyyy"
-                                                    value={deadline}
-                                                    onChange={(e) => setDeadline(e.target.value)}
-                                                    disabled={!isEditable}
-                                                    className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setShowDeadlineCalendar(!showDeadlineCalendar);
-                                                        setShowCalendar(false);
                                                     }}
                                                     disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Calendar size={20} />
-                                                </button>
-                                                {showDeadlineCalendar && renderCalendar('deadline')}
-                                            </div>
-                                        </div>
-
-                                        {/* Mode of Request */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Mode of Request
-                                            </label>
-                                            <div className="relative">
-                                                <select
-                                                    value={modeOfRequest}
-                                                    onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
-                                                    disabled={!isEditable}
-                                                    style={{ appearance: 'none' }}
-                                                    className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <option value="">Pick the Mode of Request...</option>
-                                                    {lookups.requestModes.map((mode) => (
-                                                        <option key={mode.id} value={mode.id} className='text-black'>
-                                                            {mode.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
-                                        </div>
-
-                                        {/* Rights */}
-                                        <div>
-                                            <label className="block text-graphite text-sm font-semibold mb-2">
-                                                Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="Enter Right(s) Violated..."
-                                                disabled={!isEditable}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
-                                                        e.preventDefault();
-                                                        const newValue = e.currentTarget.value.trim();
-                                                        if (!rightsViolated.includes(newValue)) {
-                                                            setRightsViolated([...rightsViolated.filter(r => r !== ''), newValue]);
-                                                        }
-                                                        e.currentTarget.value = '';
-                                                    }
-                                                }}
-                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            />
-                                            {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
-                                                <div className="flex flex-wrap gap-1 mt-2">
-                                                    {rightsViolated.filter(r => r.trim() !== '').map((right, index) => (
-                                                        <span
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                        >
-                                                            {right}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
-                                                                disabled={!isEditable}
-                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                    className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                />
+                                                {categories.filter(c => c.trim() !== '').length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {categories.filter(c => c.trim() !== '').map((category, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
                                                             >
-                                                                <XCircle size={14} className="text-royal" />
-                                                            </button>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Row 2: People (Complainants, Victims, Respondents) */}
-                                    <div className="grid grid-cols-3 gap-6 items-start">
-                                        {/* Complainants */}
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-semibold">
-                                                    Name of Complainant ({isMotuProprio ? 0 : complainants.filter(c => c.name.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addComplainantField}
-                                                    disabled={!isEditable || isMotuProprio}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).map((comp, index) => (
-                                                    <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Name of Complainant"
-                                                                value={isMotuProprio ? '' : comp.name}
-                                                                onChange={(e) => !isMotuProprio && updateComplainant(index, 'name', e.target.value)}
-                                                                disabled={!isEditable || isMotuProprio}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Contact Number"
-                                                                value={isMotuProprio ? '' : comp.contactNumber}
-                                                                onChange={(e) => !isMotuProprio && updateComplainant(index, 'contactNumber', e.target.value)}
-                                                                disabled={!isEditable || isMotuProprio}
-                                                                className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                                            />
-                                                        </div>
-                                                        {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).length > 1 && (
-                                                            <button
-                                                                onClick={() => removeComplainant(index)}
-                                                                disabled={!isEditable || isMotuProprio}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 mt-2 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Victims */}
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-semibold">
-                                                    Victims ({victims.filter(v => v.name.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addVictimField}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {victims.map((victim, index) => (
-                                                    <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Name"
-                                                                value={victim.name}
-                                                                onChange={(e) => updateVictimName(index, e.target.value)}
-                                                                disabled={!isEditable}
-                                                                className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            />
-
-                                                            {/* Multi-Select Dropdown for Victims */}
-                                                            {renderSectorDropdown(
-                                                                'victim',
-                                                                index,
-                                                                victim.sectors,
-                                                                openVictimSectorDropdown === index,
-                                                                victimSectorSearch,
-                                                                filteredVictimSectors,
-                                                                () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
-                                                                setVictimSectorSearch,
-                                                                (sector) => toggleVictimSector(index, sector),
-                                                                victimDropdownRef,
-                                                                !isEditable
-                                                            )}
-
-                                                            {/* Selected Sectors Display */}
-                                                            {victim.sectors.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {victim.sectors.map((sector) => (
-                                                                        <span
-                                                                            key={sector}
-                                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                                        >
-                                                                            {sector}
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => toggleVictimSector(index, sector)}
-                                                                                disabled={!isEditable}
-                                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
-                                                                            >
-                                                                                <XCircle size={14} className="text-royal" />
-                                                                            </button>
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        {victims.length > 1 && (
-                                                            <button
-                                                                onClick={() => removeVictim(index)}
-                                                                disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Respondents */}
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-semibold">
-                                                    Respondents ({respondents.filter(r => r.name.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addRespondentField}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {respondents.map((respondent, index) => (
-                                                    <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Name"
-                                                                value={respondent.name}
-                                                                onChange={(e) => updateRespondentName(index, e.target.value)}
-                                                                disabled={!isEditable}
-                                                                className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            />
-
-                                                            {/* Multi-Select Dropdown for Respondents */}
-                                                            {renderSectorDropdown(
-                                                                'respondent',
-                                                                index,
-                                                                respondent.sectors,
-                                                                openRespondentSectorDropdown === index,
-                                                                respondentSectorSearch,
-                                                                filteredRespondentSectors,
-                                                                () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
-                                                                setRespondentSectorSearch,
-                                                                (sector) => toggleRespondentSector(index, sector),
-                                                                respondentDropdownRef,
-                                                                !isEditable
-                                                            )}
-
-                                                            {/* Selected Sectors Display */}
-                                                            {respondent.sectors.length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {respondent.sectors.map((sector) => (
-                                                                        <span
-                                                                            key={sector}
-                                                                            className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
-                                                                        >
-                                                                            {sector}
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => toggleRespondentSector(index, sector)}
-                                                                                disabled={!isEditable}
-                                                                                className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
-                                                                            >
-                                                                                <XCircle size={14} className="text-royal" />
-                                                                            </button>
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        {respondents.length > 1 && (
-                                                            <button
-                                                                onClick={() => removeRespondent(index)}
-                                                                disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Row 3: Staff */}
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <label className="block text-graphite text-sm font-semibold">
-                                                    Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
-                                                </label>
-                                                <button
-                                                    onClick={addStaffField}
-                                                    disabled={!isEditable}
-                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {staff.map((member, index) => (
-                                                    <div key={index} className="flex gap-2 items-start">
-                                                        <div className="flex-1 flex flex-col gap-2 rounded-lg">
-                                                            <div className="relative" ref={openStaffDropdown === index ? staffDropdownRef : null}>
+                                                                {category}
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setOpenStaffDropdown(openStaffDropdown === index ? null : index)}
+                                                                    onClick={() => setCategories(categories.filter((_, i) => i !== index))}
                                                                     disabled={!isEditable}
-                                                                    className={`w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                    className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
                                                                 >
-                                                                    <span className={`truncate ${member.userId ? 'text-black' : 'text-ash'}`}>
-                                                                        {member.userId
-                                                                            ? (() => {
-                                                                                const user = users.find(u => u.id === member.userId);
-                                                                                return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
-                                                                            })()
-                                                                            : 'Assign the case to...'}
-                                                                    </span>
-                                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4" />
+                                                                    <XCircle size={14} className="text-royal" />
                                                                 </button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
 
-                                                                {openStaffDropdown === index && (
-                                                                    <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
-                                                                        {/* Search Bar */}
-                                                                        <div className="p-2 border-b">
-                                                                            <div className="relative">
-                                                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
-                                                                                <input
-                                                                                    type="text"
-                                                                                    placeholder="Search staff..."
-                                                                                    value={staffSearch}
-                                                                                    onChange={(e) => setStaffSearch(e.target.value)}
-                                                                                    className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                                    onClick={(e) => e.stopPropagation()}
-                                                                                />
-                                                                            </div>
-                                                                        </div>
+                                        {/* Row 2: Deadline, Mode of Request, Rights */}
+                                        <div className="grid grid-cols-3 gap-6">
+                                            {/* Deadline */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Deadline
+                                                </label>
+                                                <div className="relative flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="mm/dd/yyyy"
+                                                        value={deadline}
+                                                        onChange={(e) => setDeadline(e.target.value)}
+                                                        disabled={!isEditable}
+                                                        className={`flex-1 text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowDeadlineCalendar(!showDeadlineCalendar);
+                                                            setShowCalendar(false);
+                                                        }}
+                                                        disabled={!isEditable}
+                                                        className={`text-royal hover:text-ash ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Calendar size={20} />
+                                                    </button>
+                                                    {showDeadlineCalendar && renderCalendar('deadline')}
+                                                </div>
+                                            </div>
 
-                                                                        {/* Options */}
-                                                                        <div className="max-h-60 overflow-y-auto">
-                                                                            {users
-                                                                                .filter(user => {
-                                                                                    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
-                                                                                    return fullName.includes(staffSearch.toLowerCase());
-                                                                                })
-                                                                                .map((user) => (
-                                                                                    <div
-                                                                                        key={user.id}
-                                                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
-                                                                                        onClick={() => {
-                                                                                            updateStaff(index, user.id);
-                                                                                            setOpenStaffDropdown(null);
-                                                                                            setStaffSearch('');
-                                                                                        }}
-                                                                                    >
-                                                                                        {user.first_name} {user.last_name}
-                                                                                    </div>
-                                                                                ))}
-                                                                            {users.filter(user => `${user.first_name} ${user.last_name}`.toLowerCase().includes(staffSearch.toLowerCase())).length === 0 && (
-                                                                                <div className="px-4 py-2 text-sm text-gray-500">
-                                                                                    No staff found
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
+                                            {/* Mode of Request */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Mode of Request
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        value={modeOfRequest}
+                                                        onChange={(e) => setModeOfRequest(e.target.value ? Number(e.target.value) : '')}
+                                                        disabled={!isEditable}
+                                                        style={{ appearance: 'none' }}
+                                                        className={`w-full text-ash rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <option value="">Pick the Mode of Request...</option>
+                                                        {lookups.requestModes.map((mode) => (
+                                                            <option key={mode.id} value={mode.id} className='text-black'>
+                                                                {mode.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            {/* Rights */}
+                                            <div>
+                                                <label className="block text-graphite text-sm font-semibold mb-2">
+                                                    Right(s) Violated ({rightsViolated.filter(r => r.trim() !== '').length})
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter Right(s) Violated..."
+                                                    disabled={!isEditable}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                                                            e.preventDefault();
+                                                            const newValue = e.currentTarget.value.trim();
+                                                            if (!rightsViolated.includes(newValue)) {
+                                                                setRightsViolated([...rightsViolated.filter(r => r !== ''), newValue]);
+                                                            }
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }}
+                                                    className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                />
+                                                {rightsViolated.filter(r => r.trim() !== '').length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {rightsViolated.filter(r => r.trim() !== '').map((right, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                            >
+                                                                {right}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setRightsViolated(rightsViolated.filter((_, i) => i !== index))}
+                                                                    disabled={!isEditable}
+                                                                    className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <XCircle size={14} className="text-royal" />
+                                                                </button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2: People (Complainants, Victims, Respondents) */}
+                                        <div className="grid grid-cols-3 gap-6 items-start">
+                                            {/* Complainants */}
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <label className="block text-graphite text-sm font-semibold">
+                                                        Name of Complainant ({isMotuProprio ? 0 : complainants.filter(c => c.name.trim() !== '').length})
+                                                    </label>
+                                                    <button
+                                                        onClick={addComplainantField}
+                                                        disabled={!isEditable || isMotuProprio}
+                                                        className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).map((comp, index) => (
+                                                        <div key={index} className="flex gap-2 items-start">
+                                                            <div className="flex-1 flex flex-col gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Name of Complainant"
+                                                                    value={isMotuProprio ? '' : comp.name}
+                                                                    onChange={(e) => !isMotuProprio && updateComplainant(index, 'name', e.target.value)}
+                                                                    disabled={!isEditable || isMotuProprio}
+                                                                    className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                                                />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Contact Number"
+                                                                    value={isMotuProprio ? '' : comp.contactNumber}
+                                                                    onChange={(e) => !isMotuProprio && updateComplainant(index, 'contactNumber', e.target.value)}
+                                                                    disabled={!isEditable || isMotuProprio}
+                                                                    className={`w-full text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${(!isEditable || isMotuProprio) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                                                />
+                                                            </div>
+                                                            {(isMotuProprio ? [{ name: '', contactNumber: '' }] : complainants).length > 1 && (
+                                                                <button
+                                                                    onClick={() => removeComplainant(index)}
+                                                                    disabled={!isEditable || isMotuProprio}
+                                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 mt-2 ${(!isEditable || isMotuProprio) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Victims */}
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <label className="block text-graphite text-sm font-semibold">
+                                                        Victims ({victims.filter(v => v.name.trim() !== '').length})
+                                                    </label>
+                                                    <button
+                                                        onClick={addVictimField}
+                                                        disabled={!isEditable}
+                                                        className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {victims.map((victim, index) => (
+                                                        <div key={index} className="flex gap-2 items-start">
+                                                            <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Name"
+                                                                    value={victim.name}
+                                                                    onChange={(e) => updateVictimName(index, e.target.value)}
+                                                                    disabled={!isEditable}
+                                                                    className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                />
+
+                                                                {/* Multi-Select Dropdown for Victims */}
+                                                                {renderSectorDropdown(
+                                                                    'victim',
+                                                                    index,
+                                                                    victim.sectors,
+                                                                    openVictimSectorDropdown === index,
+                                                                    victimSectorSearch,
+                                                                    filteredVictimSectors,
+                                                                    () => setOpenVictimSectorDropdown(openVictimSectorDropdown === index ? null : index),
+                                                                    setVictimSectorSearch,
+                                                                    (sector) => toggleVictimSector(index, sector),
+                                                                    victimDropdownRef,
+                                                                    !isEditable
+                                                                )}
+
+                                                                {/* Selected Sectors Display */}
+                                                                {victim.sectors.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {victim.sectors.map((sector) => (
+                                                                            <span
+                                                                                key={sector}
+                                                                                className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                                            >
+                                                                                {sector}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => toggleVictimSector(index, sector)}
+                                                                                    disabled={!isEditable}
+                                                                                    className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                                                >
+                                                                                    <XCircle size={14} className="text-royal" />
+                                                                                </button>
+                                                                            </span>
+                                                                        ))}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <input
-                                                                type="email"
-                                                                value={member.email}
-                                                                readOnly
-                                                                placeholder="Email Address"
-                                                                className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
-                                                            />
+                                                            {victims.length > 1 && (
+                                                                <button
+                                                                    onClick={() => removeVictim(index)}
+                                                                    disabled={!isEditable}
+                                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                        {staff.length > 1 && (
-                                                            <button
-                                                                onClick={() => removeStaff(index)}
-                                                                disabled={!isEditable}
-                                                                className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Respondents */}
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <label className="block text-graphite text-sm font-semibold">
+                                                        Respondents ({respondents.filter(r => r.name.trim() !== '').length})
+                                                    </label>
+                                                    <button
+                                                        onClick={addRespondentField}
+                                                        disabled={!isEditable}
+                                                        className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {respondents.map((respondent, index) => (
+                                                        <div key={index} className="flex gap-2 items-start">
+                                                            <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Name"
+                                                                    value={respondent.name}
+                                                                    onChange={(e) => updateRespondentName(index, e.target.value)}
+                                                                    disabled={!isEditable}
+                                                                    className={`w-full text-black border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                />
+
+                                                                {/* Multi-Select Dropdown for Respondents */}
+                                                                {renderSectorDropdown(
+                                                                    'respondent',
+                                                                    index,
+                                                                    respondent.sectors,
+                                                                    openRespondentSectorDropdown === index,
+                                                                    respondentSectorSearch,
+                                                                    filteredRespondentSectors,
+                                                                    () => setOpenRespondentSectorDropdown(openRespondentSectorDropdown === index ? null : index),
+                                                                    setRespondentSectorSearch,
+                                                                    (sector) => toggleRespondentSector(index, sector),
+                                                                    respondentDropdownRef,
+                                                                    !isEditable
+                                                                )}
+
+                                                                {/* Selected Sectors Display */}
+                                                                {respondent.sectors.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {respondent.sectors.map((sector) => (
+                                                                            <span
+                                                                                key={sector}
+                                                                                className="inline-flex items-center gap-1 px-2 py-1 border border-royal text-midnightNavy text-xs rounded-full"
+                                                                            >
+                                                                                {sector}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => toggleRespondentSector(index, sector)}
+                                                                                    disabled={!isEditable}
+                                                                                    className={`hover:text-blue ${!isEditable ? 'cursor-not-allowed' : ''}`}
+                                                                                >
+                                                                                    <XCircle size={14} className="text-royal" />
+                                                                                </button>
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {respondents.length > 1 && (
+                                                                <button
+                                                                    onClick={() => removeRespondent(index)}
+                                                                    disabled={!isEditable}
+                                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Row 3: Staff */}
+                                        <div className="grid grid-cols-3 gap-6">
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <label className="block text-graphite text-sm font-semibold">
+                                                        Staff-in-Charge ({staff.filter(s => s.userId.trim() !== '').length})
+                                                    </label>
+                                                    <button
+                                                        onClick={addStaffField}
+                                                        disabled={!isEditable}
+                                                        className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {staff.map((member, index) => (
+                                                        <div key={index} className="flex gap-2 items-start">
+                                                            <div className="flex-1 flex flex-col gap-2 rounded-lg">
+                                                                <div className="relative" ref={openStaffDropdown === index ? staffDropdownRef : null}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setOpenStaffDropdown(openStaffDropdown === index ? null : index)}
+                                                                        disabled={!isEditable}
+                                                                        className={`w-full text-left text-ash bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm flex justify-between items-center ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                    >
+                                                                        <span className={`truncate ${member.userId ? 'text-black' : 'text-ash'}`}>
+                                                                            {member.userId
+                                                                                ? (() => {
+                                                                                    const user = users.find(u => u.id === member.userId);
+                                                                                    return user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
+                                                                                })()
+                                                                                : 'Assign the case to...'}
+                                                                        </span>
+                                                                        <img src="/icon18.png" alt="Dropdown" className="w-4 h-4" />
+                                                                    </button>
+
+                                                                    {openStaffDropdown === index && (
+                                                                        <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200">
+                                                                            {/* Search Bar */}
+                                                                            <div className="p-2 border-b">
+                                                                                <div className="relative">
+                                                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-royal" size={16} />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        placeholder="Search staff..."
+                                                                                        value={staffSearch}
+                                                                                        onChange={(e) => setStaffSearch(e.target.value)}
+                                                                                        className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Options */}
+                                                                            <div className="max-h-60 overflow-y-auto">
+                                                                                {users
+                                                                                    .filter(user => {
+                                                                                        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+                                                                                        return fullName.includes(staffSearch.toLowerCase());
+                                                                                    })
+                                                                                    .map((user) => (
+                                                                                        <div
+                                                                                            key={user.id}
+                                                                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-black"
+                                                                                            onClick={() => {
+                                                                                                updateStaff(index, user.id);
+                                                                                                setOpenStaffDropdown(null);
+                                                                                                setStaffSearch('');
+                                                                                            }}
+                                                                                        >
+                                                                                            {user.first_name} {user.last_name}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                {users.filter(user => `${user.first_name} ${user.last_name}`.toLowerCase().includes(staffSearch.toLowerCase())).length === 0 && (
+                                                                                    <div className="px-4 py-2 text-sm text-gray-500">
+                                                                                        No staff found
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <input
+                                                                    type="email"
+                                                                    value={member.email}
+                                                                    readOnly
+                                                                    placeholder="Email Address"
+                                                                    className="w-full text-black rounded-lg px-4 py-2 focus:outline-none"
+                                                                />
+                                                            </div>
+                                                            {staff.length > 1 && (
+                                                                <button
+                                                                    onClick={() => removeStaff(index)}
+                                                                    disabled={!isEditable}
+                                                                    className={`text-royal hover:text-ash border border-royal rounded p-0.5 ${!isEditable ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex justify-end items-center -mt-10 gap-2">
-                                    <button
-                                        onClick={handleSaveChanges}
-                                        className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
-                                    >
-                                        Save Changes
-                                    </button>
-                                    {currentUserRole === 'records_officer' && (
+                                    <div className="flex justify-end items-center -mt-10 gap-2">
                                         <button
-                                            onClick={handleDelete}
-                                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                            onClick={handleSaveChanges}
+                                            className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium"
                                         >
-                                            Delete
+                                            Save Changes
                                         </button>
-                                    )}
+                                        {currentUserRole === 'records_officer' && (
+                                            <button
+                                                onClick={handleDelete}
+                                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
-                </div >
-            )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 }

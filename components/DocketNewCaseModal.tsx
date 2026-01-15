@@ -585,8 +585,8 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             >
                 <span className="truncate">
                     {selectedSectors.length > 0
-                        ? `${selectedSectors.length} selected`
-                        : 'Pick the Sector...'}
+                        ? `Sector (${selectedSectors.length} applied)`
+                        : 'Sector (0 applied)'}
                 </span>
                 <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </button>
