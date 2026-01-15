@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import UserManagementTable from './UserManagementTable';
 import AddUserModal from './AddUserModal';
@@ -39,6 +39,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 100;
 
   // Search filtering
   const searchFilteredUsers = users.filter(user => {
@@ -51,6 +53,26 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
       user.role.toLowerCase().includes(searchLower)
     );
   });
+
+  // Apply role and status filters
+  const filteredUsers = searchFilteredUsers.filter(user => {
+    const roleMatch = filterRole === 'all' || user.role === filterRole;
+    const userStatus = user.status ? user.status.toUpperCase() : 'ACTIVE';
+    const filterStatusUpper = filterStatus.toUpperCase();
+    const statusMatch = filterStatus === 'all' || userStatus === filterStatusUpper;
+    return roleMatch && statusMatch;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterRole, filterStatus, searchQuery]);
 
   const handleBulkStatusUpdate = async (status: 'ACTIVE' | 'INACTIVE') => {
     if (selectedRows.length === 0) return;
@@ -210,7 +232,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
         <div className="mt-6">
           {/* Controls Bar */}
           <div className="flex items-center justify-between mb-4 px-6">
-            <h2 className="text-xl font-bold text-midnightNavy">Recent</h2>
+            <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredUsers.length}</h2>
             <div className="flex items-center gap-3">
               {/* Mark as Active/Inactive buttons */}
               <button
@@ -286,13 +308,36 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
           {/* Table */}
           <div className="bg-snowWhite shadow-sm overflow-hidden mx-6">
             <UserManagementTable
-              users={searchFilteredUsers}
-              filterRole={filterRole}
-              filterStatus={filterStatus}
+              users={paginatedUsers}
+              filterRole="all"
+              filterStatus="all"
               selectedRows={selectedRows}
               onSelectionChange={setSelectedRows}
               onEditUser={handleEditUser}
             />
+
+            {/* Pagination Controls */}
+            {filteredUsers.length > 0 && (
+              <div className="flex justify-center items-center gap-4 py-4">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded-md bg-white border border-gray-300 text-midnightNavy hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                >
+                  &lt;
+                </button>
+                <span className="text-sm text-midnightNavy">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded-md bg-white border border-gray-300 text-midnightNavy hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                >
+                  &gt;
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>

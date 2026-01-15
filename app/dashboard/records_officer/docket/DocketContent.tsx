@@ -37,6 +37,8 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const [filterType, setFilterType] = useState('all');
     const [selectedDockets, setSelectedDockets] = useState<string[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 100;
 
     // Fetch dockets on component mount
     useEffect(() => {
@@ -125,6 +127,17 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
         const typeMatch = filterType === 'all' || docket.typeOfRequest === filterType;
         return statusMatch && typeMatch;
     });
+
+    // Pagination calculations
+    const totalPages = Math.ceil(filteredDockets.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const paginatedDockets = filteredDockets.slice(startIndex, endIndex);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus, filterType]);
 
     return (
         <div className="h-screen flex bg-gray-50">
@@ -263,12 +276,35 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                         ) : (
                             <div className="overflow-hidden mx-6">
                                 <DocketTable
-                                    dockets={filteredDockets}
+                                    dockets={paginatedDockets}
                                     selectedDockets={selectedDockets}
                                     onSelectionChange={handleSelectionChange}
                                     onSelectAll={handleSelectAll}
                                     onRowClick={handleRowClick}
                                 />
+
+                                {/* Pagination Controls */}
+                                {filteredDockets.length > 0 && (
+                                    <div className="flex justify-center items-center gap-4 py-4">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                            className="px-3 py-1 rounded-md bg-white border border-gray-300 text-midnightNavy hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                                        >
+                                            &lt;
+                                        </button>
+                                        <span className="text-sm text-midnightNavy">
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                            className="px-3 py-1 rounded-md bg-white border border-gray-300 text-midnightNavy hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                                        >
+                                            &gt;
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
