@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
