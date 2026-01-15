@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { convertToDBFormat } from '@/lib/utils/date-helpers';
+import { createNotificationsForNewCase } from './notification-actions';
 
 export interface DocketSubmissionData {
     docketNumber: string;
@@ -259,6 +260,14 @@ export async function submitDocket(
                 };
             }
         }
+
+        // 6. Create notifications for all relevant users
+        await createNotificationsForNewCase(
+            docketId,
+            data.docketNumber,
+            data.staffInChargeIds,
+            deadlineDB
+        );
 
         return {
             success: true,

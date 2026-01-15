@@ -110,6 +110,17 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const [staffSearch, setStaffSearch] = useState('');
     const staffDropdownRef = useRef<HTMLDivElement>(null);
 
+    // Delete modal states
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+
+    const [showDeleteError, setShowDeleteError] = useState(false);
+    const [deleteErrorMessage, setDeleteErrorMessage] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Not found modal state
+    const [showNotFoundModal, setShowNotFoundModal] = useState(false);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -250,9 +261,14 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                     status: currentStatus,
                     complainants: details.complainants && details.complainants.length > 0 ? details.complainants : [{ name: '', contactNumber: '' }]
                 });
+            } else {
+                // If details is null/undefined, it means not found or no permission
+                setShowNotFoundModal(true);
             }
         } catch (error) {
             console.error("Failed to fetch docket details", error);
+            // Also show not found modal on error
+            setShowNotFoundModal(true);
         } finally {
             setIsLoading(false);
         }
@@ -697,19 +713,18 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
 
     const handleDelete = async () => {
         if (!docketId) return;
+        setShowDeleteConfirm(false);
+        setIsDeleting(true);
 
-        if (!confirm('Are you sure you want to delete this docket? This action cannot be undone.')) {
-            return;
-        }
-
-        setIsSaving(true);
         const result = await deleteDockets([docketId]);
-        setIsSaving(false);
+
+        setIsDeleting(false);
 
         if (result.success) {
-            onClose();
+            setShowDeleteSuccess(true);
         } else {
-            alert('Failed to delete docket: ' + result.error);
+            setDeleteErrorMessage(result.error || 'An unexpected error occurred');
+            setShowDeleteError(true);
         }
     };
 
@@ -1554,7 +1569,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                         </button>
                                         {currentUserRole === 'records_officer' && (
                                             <button
-                                                onClick={handleDelete}
+                                                onClick={() => setShowDeleteConfirm(true)}
                                                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium transition-colors"
                                             >
                                                 Delete
@@ -1564,6 +1579,112 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                 </div>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                        <h3 className="text-xl font-bold text-midnightNavy mb-4">Confirm Deletion</h3>
+                        <p className="text-gray-600 mb-6">
+                            Are you sure you want to delete this docket? This action cannot be undone and all associated data will be removed.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        Deleting
+                                    </>
+                                ) : (
+                                    'Delete Docket'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Success Modal */}
+            {showDeleteSuccess && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
+                    <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-midnightNavy mb-2">Deleted Successfully</h3>
+                        <p className="text-gray-600 mb-6">The docket has been permanently deleted.</p>
+                        <button
+                            onClick={() => {
+                                setShowDeleteSuccess(false);
+                                onClose();
+                            }}
+                            className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-8 rounded-lg transition-colors"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Error Modal */}
+            {showDeleteError && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
+                    <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-midnightNavy mb-2">Deletion Failed</h3>
+                        <p className="text-gray-600 mb-6">{deleteErrorMessage}</p>
+                        <button
+                            onClick={() => setShowDeleteError(false)}
+                            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-8 rounded-lg transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Not Found / Unavailable Modal */}
+            {showNotFoundModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
+                    <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-midnightNavy mb-2">Case Unavailable</h3>
+                        <p className="text-gray-600 mb-6">
+                            The case no longer exists or you are no longer assigned with the case.
+                        </p>
+                        <button
+                            onClick={() => {
+                                setShowNotFoundModal(false);
+                                onClose();
+                            }}
+                            className="bg-royalAzure hover:bg-blue-700 text-white font-semibold py-2 px-8 rounded-lg transition-colors"
+                        >
+                            Close
+                        </button>
                     </div>
                 </div>
             )}

@@ -7,7 +7,7 @@ import { signOut } from '../../../components/actions';
 import LogoutButton from '@/components/LogoutButton';
 import { getDashboardStats, getUrgentCases } from '@/lib/actions/dashboard-stats';
 import Sidebar from '@/components/Sidebar';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardHeaderWrapper from '@/components/dashboard/DashboardHeaderWrapper';
 import UrgentCases from '@/components/dashboard/UrgentCases';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
 import { getCaseTypeBreakdown, getCaseAgeingOverview } from '@/lib/actions/analytics';
@@ -73,7 +73,7 @@ export default async function RecordsOfficerDashboard() {
 
             {/* MIDDLE COLUMN */}
             <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
-                <DashboardHeader userData={userData} />
+                <DashboardHeaderWrapper userData={userData} users={allUsers || []} lookups={lookups} />
 
                 <div className="px-6 mt-6 space-y-6">
                     {/* Dashboard main content */}

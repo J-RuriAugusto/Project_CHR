@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import NotificationModal from './NotificationModal';
+import { getNotificationsForUser } from '@/lib/actions/notification-actions';
 
 interface DashboardHeaderProps {
     userData: {
@@ -11,15 +12,50 @@ interface DashboardHeaderProps {
         role: string;
         profile_picture_url?: string;
     };
+    onDocketClick?: (docketId: string) => void;
 }
 
-export default function DashboardHeader({ userData }: DashboardHeaderProps) {
+export default function DashboardHeader({ userData, onDocketClick }: DashboardHeaderProps) {
     const router = useRouter();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Fetch unread count on mount and periodically
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const result = await getNotificationsForUser();
+                setUnreadCount(result.unreadCount);
+            } catch (error) {
+                console.error('Error fetching unread count:', error);
+            }
+        };
+
+        fetchUnreadCount();
+
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Refresh unread count when modal closes
+    useEffect(() => {
+        if (!showNotifications) {
+            const fetchUnreadCount = async () => {
+                try {
+                    const result = await getNotificationsForUser();
+                    setUnreadCount(result.unreadCount);
+                } catch (error) {
+                    console.error('Error fetching unread count:', error);
+                }
+            };
+            fetchUnreadCount();
+        }
+    }, [showNotifications]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -119,17 +155,27 @@ export default function DashboardHeader({ userData }: DashboardHeaderProps) {
                     </button>
                 </div>
 
+                {/* Notification Button with Badge */}
                 <button
                     className="relative p-2"
                     onClick={() => setShowNotifications(!showNotifications)}
                 >
                     <img src="/icon10.png" alt="Notifications" className="w-6 h-6" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
                 </button>
 
                 {showNotifications && (
                     <NotificationModal
                         isOpen={showNotifications}
                         onClose={() => setShowNotifications(false)}
+                        onDocketClick={(docketId) => {
+                            setShowNotifications(false);
+                            if (onDocketClick) onDocketClick(docketId);
+                        }}
                     />
                 )}
 

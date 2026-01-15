@@ -259,7 +259,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
 
             {/* MIDDLE COLUMN */}
             <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
-                <DocketHeader userData={userData} />
+                <DocketHeader userData={userData} onDocketClick={handleRowClick} />
 
                 <div className="mt-6">
                     {/* Controls Bar */}

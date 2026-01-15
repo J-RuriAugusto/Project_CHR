@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardHeaderWrapper from '@/components/dashboard/DashboardHeaderWrapper';
 import { headers } from "next/headers";
 import Sidebar from '@/components/Sidebar';
 import { signOut } from '../../../components/actions';
@@ -72,7 +72,7 @@ export default async function InvestigationChiefDashboard() {
 
             {/* MIDDLE COLUMN */}
             <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
-                <DashboardHeader userData={userData} />
+                <DashboardHeaderWrapper userData={userData} users={allUsers || []} lookups={lookups} />
 
                 <div className="px-6 mt-6 space-y-6">
                     {/* Dashboard main content */}

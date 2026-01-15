@@ -31,6 +31,30 @@ export async function deleteDockets(docketIds: string[]) {
     const supabase = createClient();
 
     try {
+        // First, get docket info and assigned officers BEFORE deletion
+        const docketInfoPromises = docketIds.map(async (docketId) => {
+            // Get docket number
+            const { data: docket } = await supabase
+                .from('dockets')
+                .select('docket_number')
+                .eq('id', docketId)
+                .single();
+
+            // Get assigned officers
+            const { data: staffAssignments } = await supabase
+                .from('docket_staff')
+                .select('user_id')
+                .eq('docket_id', docketId);
+
+            return {
+                docketNumber: docket?.docket_number || 'Unknown',
+                assignedOfficerIds: (staffAssignments || []).map(s => s.user_id)
+            };
+        });
+
+        const docketInfos = await Promise.all(docketInfoPromises);
+
+        // Now perform the deletion
         const { error } = await supabase
             .from('dockets')
             .delete()
@@ -39,6 +63,16 @@ export async function deleteDockets(docketIds: string[]) {
         if (error) {
             console.error('Error deleting dockets:', error);
             return { success: false, error: error.message };
+        }
+
+        // Create notifications for each deleted docket
+        const { createNotificationsForDeletedCase } = await import('./notification-actions');
+
+        for (const info of docketInfos) {
+            await createNotificationsForDeletedCase(
+                info.docketNumber,
+                info.assignedOfficerIds
+            );
         }
 
         revalidatePath('/dashboard/records_officer/docket');
