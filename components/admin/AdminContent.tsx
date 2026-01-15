@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import UserManagementTable from './UserManagementTable';
 import AddUserModal from './AddUserModal';
@@ -30,7 +30,12 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   const [filterStatus, setFilterStatus] = useState('all');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  // Search states
+  const [pendingSearchQuery, setPendingSearchQuery] = useState(''); // Input value
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState(''); // Value used for filtering
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Editing state
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -42,16 +47,61 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 100;
 
-  // Search filtering
+  // Cleanup timeout
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
+
+  const handleSearch = () => {
+    if (isSearching) return; // Prevent double trigger
+
+    setIsSearching(true);
+
+    // Simulate network request delay
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setAppliedSearchQuery(pendingSearchQuery);
+      setIsSearching(false);
+    }, 1500); // 1.5s delay to show animation
+  };
+
+  const cancelSearch = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent search trigger if bubbling
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    setIsSearching(false);
+    // Optionally revert pending to applied?
+    // setPendingSearchQuery(appliedSearchQuery);
+  };
+
+  // Search filtering using appliedSearchQuery
   const searchFilteredUsers = users.filter(user => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      user.email.toLowerCase().includes(searchLower) ||
-      user.first_name.toLowerCase().includes(searchLower) ||
-      user.last_name.toLowerCase().includes(searchLower) ||
-      user.role.toLowerCase().includes(searchLower)
-    );
+    if (!appliedSearchQuery) return true;
+
+    // Split by comma and clean up whitespace
+    const searchTerms = appliedSearchQuery
+      .toLowerCase()
+      .split(',')
+      .map(term => term.trim())
+      .filter(term => term.length > 0);
+
+    if (searchTerms.length === 0) return true;
+
+    // Check if ALL terms match at least one field (AND logic)
+    return searchTerms.every(term => {
+      const matchesEmail = user.email.toLowerCase().includes(term);
+      const matchesFirstName = user.first_name.toLowerCase().includes(term);
+      const matchesLastName = user.last_name.toLowerCase().includes(term);
+      const matchesRole = user.role.toLowerCase().includes(term);
+      const matchesStatus = (user.status || 'ACTIVE').toLowerCase().includes(term);
+
+      return matchesEmail || matchesFirstName || matchesLastName || matchesRole || matchesStatus;
+    });
   });
 
   // Apply role and status filters
@@ -72,7 +122,7 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterRole, filterStatus, searchQuery]);
+  }, [filterRole, filterStatus, appliedSearchQuery]);
 
   const handleBulkStatusUpdate = async (status: 'ACTIVE' | 'INACTIVE') => {
     if (selectedRows.length === 0) return;
@@ -173,8 +223,8 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
 
       {/* MIDDLE COLUMN - Main Content */}
       <main className="bg-snowWhite flex-1 overflow-y-auto pb-6 relative custom-scrollbar">
-        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
-          <div>
+        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between relative">
+          <div className={`transition-opacity duration-300 ease-in-out ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <h1 className="text-4xl font-bold text-midnightNavy">
               User & Role Management
             </h1>
@@ -183,25 +233,57 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
             </p>
           </div>
 
+          {/* Expanded Search Bar Overlay */}
+          {isSearchOpen && (
+            <div
+              className="absolute left-6 right-48 top-1/2 -translate-y-1/2 transition-all duration-300"
+              onMouseEnter={() => !isSearching && setIsSearchOpen(true)}
+              onMouseLeave={() => !pendingSearchQuery && !isSearching && setIsSearchOpen(false)}
+            >
+              <input
+                type="text"
+                placeholder="Search details (keywords separated by comma)..."
+                value={pendingSearchQuery}
+                onChange={(e) => setPendingSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onFocus={() => setIsSearchOpen(true)}
+                onBlur={() => !pendingSearchQuery && !isSearching && setIsSearchOpen(false)}
+                autoFocus
+                disabled={isSearching}
+                className={`w-full pl-4 pr-12 py-2 border border-midnightNavy rounded-full text-sm text-midnightNavy outline-none focus:border-blue-500 ${isSearching ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
+              />
+            </div>
+          )}
+
           {/* USER INFO */}
-          <div className="flex items-center gap-16">
+          <div className="flex items-center gap-4">
             <div
               className="relative flex items-center"
-              onMouseEnter={() => setIsSearchOpen(true)}
-              onMouseLeave={() => setIsSearchOpen(false)}
+              onMouseEnter={() => !isSearching && setIsSearchOpen(true)}
+              onMouseLeave={() => !pendingSearchQuery && !isSearching && setIsSearchOpen(false)}
             >
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'w-80 opacity-100' : 'w-0 opacity-0'
-                }`}>
-                <input
-                  type="text"
-                  placeholder="Search a user or a keyword..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-midnightNavy rounded-full text-sm text-midnightNavy outline-none focus:border-blue-500"
-                />
-              </div>
-              <button className="p-2 rounded-full hover:bg-snowWhite transition ml-2">
-                <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
+              <button
+                onClick={isSearching ? cancelSearch : handleSearch}
+                className={`p-2 rounded-full transition relative ${isSearching ? 'hover:bg-red-50' : 'hover:bg-snowWhite'}`}
+                disabled={isSearching ? false : false}
+              >
+                {isSearching ? (
+                  <div className="relative w-6 h-6 flex items-center justify-center">
+                    {/* Loading Spinner Ring */}
+                    <div className="absolute inset-0 border-2 border-midnightNavy border-t-transparent rounded-full animate-spin"></div>
+                    {/* X Mark inside */}
+                    <svg
+                      className="w-3 h-3 text-red-600 relative z-10"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                ) : (
+                  <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
+                )}
               </button>
             </div>
 
@@ -232,7 +314,23 @@ export default function AdminContent({ userData, signOut, users }: AdminContentP
         <div className="mt-6">
           {/* Controls Bar */}
           <div className="flex items-center justify-between mb-4 px-6">
-            <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredUsers.length}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-midnightNavy">Count: {filteredUsers.length}</h2>
+              {(filterRole !== 'all' || filterStatus !== 'all' || appliedSearchQuery !== '') && (
+                <button
+                  onClick={() => {
+                    setFilterRole('all');
+                    setFilterStatus('all');
+                    setPendingSearchQuery('');
+                    setAppliedSearchQuery('');
+                    setIsSearchOpen(false);
+                  }}
+                  className="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium mt-1"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               {/* Mark as Active/Inactive buttons */}
               <button

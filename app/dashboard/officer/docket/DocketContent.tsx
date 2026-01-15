@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDockets, DocketListItem } from '@/lib/actions/docket-queries';
 import { updateDocketStatus } from '@/lib/actions/docket-actions';
@@ -26,7 +26,16 @@ interface DocketContentProps {
 }
 
 export default function DocketContent({ userData, signOut, users, lookups }: DocketContentProps) {
+    const router = useRouter();
     const searchParams = useSearchParams();
+    const basePath = `/dashboard/${userData.role}`;
+    // currentPath used in clearFilters, need to declare if not present or use straight logic
+    // Using window.location.pathname or similar in client component or just empty string if not used
+    // Wait, previous replace showed router.replace(currentPath) in clearFilters. 
+    // So currentPath IS used.
+    const currentPath = usePathname();
+    const searchQuery = searchParams.get('search') || '';
+
     const initialStatus = searchParams.get('status');
 
 
@@ -98,10 +107,12 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
         setFilterTypes([]);
         setDateRangeStart('');
         setDateRangeEnd('');
+        router.replace(`${basePath}/docket`); // Reset URL params to clear search
     };
 
     // Check if any filters are active
-    const hasActiveFilters = filterStatuses.length > 0 || filterTypes.length > 0 || dateRangeStart !== '' || dateRangeEnd !== '';
+    // Check if any filters are active
+    const hasActiveFilters = filterStatuses.length > 0 || filterTypes.length > 0 || dateRangeStart !== '' || dateRangeEnd !== '' || searchQuery !== '';
 
     // Fetch dockets on component mount
     useEffect(() => {
@@ -156,14 +167,15 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
         fetchDockets();
     };
 
-    const basePath = `/dashboard/${userData.role}`;
-    const currentPath = usePathname() || "/";
-
+    // Apply filters
     const filteredDockets = dockets.filter(docket => {
+        // 1. Status Filter
         const statusMatch = filterStatuses.length === 0 || filterStatuses.includes(docket.status);
+
+        // 2. Type Filter
         const typeMatch = filterTypes.length === 0 || filterTypes.includes(docket.typeOfRequest);
 
-        // Date range filter
+        // 3. Date Filter
         let dateMatch = true;
         if (dateRangeStart || dateRangeEnd) {
             const docketDate = docket.dateReceived ? new Date(docket.dateReceived) : null;
@@ -182,8 +194,35 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
             }
         }
 
-        return statusMatch && typeMatch && dateMatch;
+        // 4. Search Filter (Comma-separated AND logic)
+        let searchMatch = true;
+        if (searchQuery) {
+            const searchTerms = searchQuery
+                .toLowerCase()
+                .split(',')
+                .map(term => term.trim())
+                .filter(term => term.length > 0);
+
+            if (searchTerms.length > 0) {
+                searchMatch = searchTerms.every(term => {
+                    const matchesNumber = docket.docketNumber.toLowerCase().includes(term);
+                    const matchesType = docket.typeOfRequest.toLowerCase().includes(term);
+                    const matchesStatus = docket.status.toLowerCase().includes(term);
+                    const matchesAssigned = docket.assignedTo.toLowerCase().includes(term);
+                    const matchesDate = docket.dateReceived ? new Date(docket.dateReceived).toLocaleDateString().includes(term) : false;
+
+                    return matchesNumber || matchesType || matchesStatus || matchesAssigned || matchesDate;
+                });
+            }
+        }
+
+        return statusMatch && typeMatch && dateMatch && searchMatch;
     });
+
+    // Reset to page 1 when filters change (including search)
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatuses, filterTypes, dateRangeStart, dateRangeEnd, searchQuery]);
 
     // Pagination calculations
     const totalPages = Math.ceil(filteredDockets.length / ITEMS_PER_PAGE);

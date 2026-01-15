@@ -17,7 +17,7 @@ export default async function Docket() {
     // Fetch user data
     const { data: userData, error } = await supabase
         .from('users')
-        .select('first_name, last_name, role')
+        .select('first_name, last_name, role, profile_picture_url')
         .eq('email', session.user.email)
         .single();
 

@@ -13,6 +13,13 @@ export interface DocketListItem {
     lastUpdated: string;
     deadline: Date;
     dateReceived: string;
+    // New search fields
+    violationCategory: string;
+    requestMode: string;
+    rights: string[];
+    complainants: string[];
+    parties: string[];
+    sectors: string[];
 }
 
 /**
@@ -30,10 +37,21 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             deadline,
             updated_at,
             status,
+            violation_category,
             type_of_request_id,
             request_types!type_of_request_id (name),
+            mode_of_request_id,
+            request_modes!mode_of_request_id (name),
             docket_staff (
                 users (first_name, last_name)
+            ),
+            docket_rights (right_name),
+            docket_complainants (name),
+            docket_parties (
+                name,
+                docket_party_sectors (
+                    sectors (name)
+                )
             )
         `)
         .order('updated_at', { ascending: false });
@@ -41,18 +59,6 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
     if (userId) {
         // If userId is provided, we need to filter dockets where this user is assigned.
         // We use !inner to ensure we only get dockets that have a matching staff record.
-        // Note: This filters the returned docket_staff array to ONLY contain this user.
-        // If we want to show ALL staff for these dockets, we would need a more complex query (e.g. aliases),
-        // but for now, showing just the assigned officer (the current user) in the "Assigned To" column
-        // for their own dashboard is acceptable, or we can assume the "Assigned To" logic handles it.
-        // Actually, let's try to use an alias if possible, but Supabase simple client might be tricky with aliases in the same query builder chain if not careful.
-        // Let's stick to the simple filter first. If the user complains about "Assigned To" only showing themselves, we can improve.
-        // However, the current query selects `docket_staff`. If we add a filter on `docket_staff.user_id`, it implicitly adds !inner logic if we are not careful, or we explicitly ask for it.
-
-        // To properly filter dockets BY user but return ALL staff, we need:
-        // .select('..., all_staff:docket_staff(...), my_staff:docket_staff!inner(user_id)')
-        // .eq('my_staff.user_id', userId)
-
         query = supabase
             .from('dockets')
             .select(`
@@ -62,10 +68,21 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
                 deadline,
                 updated_at,
                 status,
+                violation_category,
                 type_of_request_id,
                 request_types!type_of_request_id (name),
+                mode_of_request_id,
+                request_modes!mode_of_request_id (name),
                 docket_staff (
                     users (first_name, last_name)
+                ),
+                docket_rights (right_name),
+                docket_complainants (name),
+                docket_parties (
+                    name,
+                    docket_party_sectors (
+                        sectors (name)
+                    )
                 ),
                 filter_staff:docket_staff!inner(user_id)
             `)
@@ -87,7 +104,6 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
 
     return data.map((docket: any) => {
         // Parse deadline manually to ensure it's treated as local time 00:00:00
-        // new Date("YYYY-MM-DD") parses as UTC, which can be previous day in local time
         const deadlineParts = docket.deadline.split('-');
         const deadlineDate = new Date(
             parseInt(deadlineParts[0]),
@@ -121,6 +137,26 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             }
         }
 
+        // Searchable fields extraction
+        const rights = docket.docket_rights?.map((r: any) => r.right_name) || [];
+        const complainants = docket.docket_complainants?.map((c: any) => c.name) || [];
+
+        // Extract parties and Flatten sectors
+        const parties: string[] = [];
+        const sectorsSet = new Set<string>();
+
+        if (docket.docket_parties) {
+            docket.docket_parties.forEach((p: any) => {
+                parties.push(p.name);
+                if (p.docket_party_sectors) {
+                    p.docket_party_sectors.forEach((s: any) => {
+                        if (s.sectors?.name) sectorsSet.add(s.sectors.name);
+                    });
+                }
+            });
+        }
+        const sectors = Array.from(sectorsSet);
+
         return {
             id: docket.id,
             docketNumber: docket.docket_number,
@@ -130,7 +166,14 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             daysTillDeadline,
             lastUpdated: new Date(docket.updated_at).toLocaleDateString('en-US'),
             deadline: deadlineDate,
-            dateReceived: docket.date_received
+            dateReceived: docket.date_received,
+            // New fields
+            violationCategory: docket.violation_category || '',
+            requestMode: docket.request_modes?.name || '',
+            rights,
+            complainants,
+            parties,
+            sectors
         };
     });
 }

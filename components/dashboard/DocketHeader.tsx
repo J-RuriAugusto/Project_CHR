@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import NotificationModal from './NotificationModal';
 
 interface DocketHeaderProps {
@@ -15,40 +15,125 @@ interface DocketHeaderProps {
 
 export default function DocketHeader({ userData }: DocketHeaderProps) {
     const router = useRouter();
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const searchParams = useSearchParams();
+    const [isSearchOpen, setIsSearchOpen] = useState(!!searchParams.get('search'));
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
     const [showNotifications, setShowNotifications] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        const query = searchParams.get('search') || '';
+        // Only update local state if NOT searching, to prevent conflict during typing if param changes elsewhere
+        if (!isSearching) {
+            setSearchQuery(query);
+            setIsSearchOpen(!!query);
+        }
+    }, [searchParams, isSearching]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        };
+    }, []);
+
+    const handleSearch = () => {
+        if (isSearching) return; // Prevent double trigger
+
+        setIsSearching(true);
+
+        // Simulate network request delay
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+        searchTimeoutRef.current = setTimeout(() => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (searchQuery.trim()) {
+                params.set('search', searchQuery);
+            } else {
+                params.delete('search');
+            }
+            router.replace(`?${params.toString()}`);
+            setIsSearching(false);
+        }, 1500); // 1.5s delay to show animation
+    };
+
+    const cancelSearch = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent search trigger if bubbling
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+            searchTimeoutRef.current = null;
+        }
+        setIsSearching(false);
+        // Optionally revert search query to what's in URL?
+        // setSearchQuery(searchParams.get('search') || ''); 
+        // For now, let's just stop the spinning.
+    };
 
     return (
-        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between">
-            <div>
-                <h1 className="text-4xl font-bold text-midnightNavy">
+        <div className="bg-white w-full shadow-sm p-6 sticky top-0 z-10 flex items-center justify-between relative">
+            {/* Left side - Title */}
+            <div className={`transition-opacity duration-300 ease-in-out ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <h1 className="text-4xl font-bold text-midnightNavy whitespace-nowrap">
                     Case Docketing & Tracking
                 </h1>
-                <p className="text-base font-normal text-midnightNavy mt-1">
+                <p className="text-base font-normal text-midnightNavy mt-1 whitespace-nowrap">
                     Register and track all human right cases with real-time status updates and investigation deadlines.
                 </p>
             </div>
 
+            {/* Expanded Search Bar Overlay */}
+            {isSearchOpen && (
+                <div
+                    className="absolute left-6 right-64 top-1/2 -translate-y-1/2 transition-all duration-300"
+                    onMouseEnter={() => !isSearching && setIsSearchOpen(true)}
+                    onMouseLeave={() => !searchQuery && !isSearching && setIsSearchOpen(false)}
+                >
+                    <input
+                        type="text"
+                        placeholder="Search details (keywords separated by comma)..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                        onFocus={() => setIsSearchOpen(true)}
+                        onBlur={() => !searchQuery && !isSearching && setIsSearchOpen(false)}
+                        autoFocus
+                        disabled={isSearching}
+                        className={`w-full pl-4 pr-12 py-2 border border-midnightNavy rounded-full text-sm text-midnightNavy outline-none focus:border-blue-500 ${isSearching ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
+                    />
+                </div>
+            )}
+
             {/* USER INFO */}
             <div className="flex items-center gap-4">
+                {/* Search Button */}
                 <div
                     className="relative flex items-center"
-                    onMouseEnter={() => setIsSearchOpen(true)}
-                    onMouseLeave={() => setIsSearchOpen(false)}
+                    onMouseEnter={() => !isSearching && setIsSearchOpen(true)}
+                    onMouseLeave={() => !searchQuery && !isSearching && setIsSearchOpen(false)}
                 >
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'w-60 opacity-100' : 'w-0 opacity-0'
-                        }`}>
-                        <input
-                            type="text"
-                            placeholder="Search case by docket number or key..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-4 py-2 border border-midnightNavy rounded-full text-xs text-midnightNavy outline-none focus:border-blue-500"
-                        />
-                    </div>
-                    <button className="p-2 rounded-full hover:bg-snowWhite transition ml-2">
-                        <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
+                    <button
+                        onClick={isSearching ? cancelSearch : handleSearch}
+                        className={`p-2 rounded-full transition relative ${isSearching ? 'hover:bg-red-50' : 'hover:bg-snowWhite'}`}
+                        disabled={isSearching ? false : false} // Allow clicking to cancel
+                    >
+                        {isSearching ? (
+                            <div className="relative w-6 h-6 flex items-center justify-center">
+                                {/* Loading Spinner Ring */}
+                                <div className="absolute inset-0 border-2 border-midnightNavy border-t-transparent rounded-full animate-spin"></div>
+                                {/* X Mark inside */}
+                                <svg
+                                    className="w-3 h-3 text-red-600 relative z-10"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                        ) : (
+                            <img src="/icon9.png" alt="search" className="w-6 h-6 object-contain text-midnightNavy" />
+                        )}
                     </button>
                 </div>
 
