@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, first_name, last_name, role } = await request.json();
+    const { email, first_name, last_name, role } = await request.json();
 
     // Validate required fields
     if (!email || !first_name || !last_name || !role) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, first_name, last_name, role' }, 
+        { error: 'Missing required fields: email, first_name, last_name, role' },
         { status: 400 }
       );
     }
@@ -25,17 +25,19 @@ export async function POST(request: Request) {
       }
     );
 
-    // Step 1: Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password || 'p@ssw0rD', // Use provided password or default
-      email_confirm: true, // Auto-confirm the email so they can login immediately
-      user_metadata: {
-        first_name,
-        last_name,
-        role
+    // Step 1: Invite user via Supabase Auth
+    // This sends an email to the user with a link to set their password
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      email,
+      {
+        data: {
+          first_name,
+          last_name,
+          role
+        },
+        redirectTo: `${new URL(request.url).origin}/auth/confirm`
       }
-    });
+    );
 
     if (authError) {
       console.error('Auth creation error:', authError);
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
         first_name: first_name,
         last_name: last_name,
         role: role,
+        status: 'ACTIVE',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -59,14 +62,14 @@ export async function POST(request: Request) {
 
     if (userError) {
       console.error('User table creation error:', userError);
-      
+
       // If users table insert fails, clean up the auth user
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      
+
       return NextResponse.json({ error: `Database error: ${userError.message}` }, { status: 400 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'User created successfully',
       user: userData

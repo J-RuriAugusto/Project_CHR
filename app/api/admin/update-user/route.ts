@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 
 export async function PUT(request: Request) {
   try {
-    const { userId, email, first_name, last_name, role } = await request.json();
+    const { userId, email, first_name, last_name, role, status } = await request.json();
 
-    if (!userId || !email || !first_name || !last_name || !role) {
+    if (!userId || !email || !first_name || !last_name || !role || !status) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
 
@@ -94,6 +94,7 @@ export async function PUT(request: Request) {
         first_name,
         last_name,
         role,
+        status,
         updated_at: new Date().toISOString()
       })
       .eq('id', userId)

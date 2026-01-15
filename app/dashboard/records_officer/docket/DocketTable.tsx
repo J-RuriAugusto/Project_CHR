@@ -1,304 +1,138 @@
 "use client";
 
 import React, { useState } from "react";
+import { DocketListItem } from "@/lib/actions/docket-queries";
 
-export default function DocketTable() {
-    const [selectedRows, setSelectedRows] = useState<number[]>([]);
+interface DocketTableProps {
+    dockets: DocketListItem[];
+    selectedDockets: string[];
+    onSelectionChange: (docketId: string) => void;
+    onSelectAll: (ids: string[]) => void;
+    onRowClick: (docketId: string) => void;
+}
 
-    const handleCheckboxChange = (rowIndex: number) => {
-        setSelectedRows(prev =>
-            prev.includes(rowIndex)
-                ? prev.filter(i => i !== rowIndex)
-                : [...prev, rowIndex]
-        );
+// Status badge component with color coding
+function StatusBadge({ status }: { status: string }) {
+    const statusStyles = {
+        'Overdue': 'bg-coral text-white',
+        'Urgent': 'bg-goldenYellow text-white',
+        'Due': 'bg-goldenYellow text-white',
+        'Active': 'bg-royalBlue text-white',
+        'Completed': 'bg-brightGreen text-white',
+        'Pending': 'bg-white text-golden border border-golden',
+        'For Review': 'bg-transparent text-golden border border-golden',
     };
 
+    const style = statusStyles[status as keyof typeof statusStyles] || 'bg-gray-200 text-gray-800';
+
     return (
-        <table className="w-full">
-            <thead className="border-b-2 border-t-2 border-graphiteGray">
-            <tr>
-                <th className="w-12 px-4 py-2">
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Docket No.
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Type of Request
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Status
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Assigned
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Days till Deadline
-                </th>
-                <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
-                Last Updated
-                </th>
-            </tr>
+        <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium ${style}`}>
+            {status}
+        </span>
+    );
+}
+
+export default function DocketTable({ dockets, selectedDockets, onSelectionChange, onSelectAll, onRowClick }: DocketTableProps) {
+
+    // Show message if no dockets
+    if (dockets.length === 0) {
+        return (
+            <div className="w-full p-8 text-center text-midnightNavy">
+                <p className="text-lg">No dockets found</p>
+                <p className="text-sm mt-2">Click "Docket New Case" to create your first docket</p>
+            </div>
+        );
+    }
+
+    const allSelected = dockets.length > 0 && dockets.every(d => selectedDockets.includes(d.id));
+    const isIndeterminate = selectedDockets.length > 0 && !allSelected;
+
+    return (
+        <table className="w-full bg-snowWhite">
+            <thead className="bg-white border-b border-t border-ash">
+                <tr>
+                    <th className="w-12 px-4 py-2">
+                        <input
+                            type="checkbox"
+                            className="rounded border-gray-300"
+                            checked={allSelected}
+                            ref={input => {
+                                if (input) input.indeterminate = isIndeterminate;
+                            }}
+                            onChange={() => {
+                                if (allSelected) {
+                                    onSelectAll([]);
+                                } else {
+                                    onSelectAll(dockets.map(d => d.id));
+                                }
+                            }}
+                        />
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Docket No.
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Type of Request
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Status
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Assigned
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Days till Deadline
+                    </th>
+                    <th className="px-4 py-2 text-left text-base font-semibold text-black tracking-wider">
+                        Last Updated
+                    </th>
+                </tr>
             </thead>
-            <tbody className="divide-y-2 divide-graphiteGray border-b-2 border-graphiteGray">
-            {/* Row 1 - Completed */}
-            <tr className={`${selectedRows.includes(0) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(0)}
-                    onChange={() => handleCheckboxChange(0)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-brightGreen text-white">
-                    Completed
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">-</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 2 - Overdue */}
-            <tr className={`${selectedRows.includes(1) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(1)}
-                    onChange={() => handleCheckboxChange(1)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-coral text-white">
-                    Overdue
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">-2 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 3 - Active */}
-            <tr className={`${selectedRows.includes(2) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(2)}
-                    onChange={() => handleCheckboxChange(2)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-royalBlue text-white">
-                    Active
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">10 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 4 - Due */}
-            <tr className={`${selectedRows.includes(3) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(3)}
-                    onChange={() => handleCheckboxChange(3)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-oceanBlue border border-oceanBlue">
-                    Legal Assist.
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-goldenYellow text-white">
-                    Due
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">5 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 5 - Pending */}
-            <tr className={`${selectedRows.includes(4) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(4)}
-                    onChange={() => handleCheckboxChange(4)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-oceanBlue border border-oceanBlue">
-                    Legal Assist.
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-white text-golden border border-golden">
-                    Pending
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">Pending</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 6 - Completed */}
-            <tr className={`${selectedRows.includes(5) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(5)}
-                    onChange={() => handleCheckboxChange(5)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-brightGreen text-white">
-                    Completed
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">-</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
-
-            {/* Row 7 - Overdue */}
-            <tr className={`${selectedRows.includes(6) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(6)}
-                    onChange={() => handleCheckboxChange(6)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-coral text-white">
-                    Overdue
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">-2 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 7, 2025</td>
-            </tr>
-
-            {/* Row 8 - Active */}
-            <tr className={`${selectedRows.includes(7) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(7)}
-                    onChange={() => handleCheckboxChange(7)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
-                    Investigation
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-royalBlue text-white">
-                    Active
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">10 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 7, 2025</td>
-            </tr>
-
-            {/* Row 9 - Due */}
-            <tr className={`${selectedRows.includes(8) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(8)}
-                    onChange={() => handleCheckboxChange(8)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-oceanBlue border border-oceanBlue">
-                    Legal Assist.
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-goldenYellow text-white">
-                    Due
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">5 days</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 7, 2025</td>
-            </tr>
-
-            {/* Row 10 - Pending */}
-            <tr className={`${selectedRows.includes(9) ? 'bg-highlight' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-2">
-                <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300" 
-                    checked={selectedRows.includes(9)}
-                    onChange={() => handleCheckboxChange(9)}
-                />
-                </td>
-                <td className="px-4 py-2 text-sm text-black">CHR-VII-2025-0649</td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-oceanBlue border border-oceanBlue">
-                    Legal Assist.
-                </span>
-                </td>
-                <td className="px-4 py-2">
-                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-white text-golden border border-golden">
-                    Pending
-                </span>
-                </td>
-                <td className="px-4 py-2 text-sm text-black">Atty. Reyes</td>
-                <td className="px-4 py-2 text-sm text-deepNavy">Pending</td>
-                <td className="px-4 py-2 text-sm text-black">Oct 5, 2025</td>
-            </tr>
+            <tbody className="divide-y divide-graphiteGray border-b border-ash">
+                {dockets.map((docket) => (
+                    <tr
+                        key={docket.id}
+                        className={`${selectedDockets.includes(docket.id) ? 'bg-highlight' : 'hover:bg-sky'} cursor-pointer transition-colors duration-150`}
+                        onClick={() => onRowClick(docket.id)}
+                    >
+                        <td
+                            className="px-4 py-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectionChange(docket.id);
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={selectedDockets.includes(docket.id)}
+                                onChange={() => { }} // Controlled component, handled by parent or td click
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectionChange(docket.id);
+                                }}
+                            />
+                        </td>
+                        <td className="px-4 py-2 text-sm text-black">{docket.docketNumber}</td>
+                        <td className="px-4 py-2">
+                            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium text-royalAzure border border-royalAzure">
+                                {docket.typeOfRequest}
+                            </span>
+                        </td>
+                        <td className="px-4 py-2">
+                            <StatusBadge status={docket.status} />
+                        </td>
+                        <td className="px-4 py-2 text-sm text-black">{docket.assignedTo}</td>
+                        <td className="px-4 py-2 text-sm text-deepNavy">
+                            {['Completed', 'Terminated', 'Void'].includes(docket.status) ? (
+                                <div className="pl-14">—</div>
+                            ) : (
+                                `${docket.daysTillDeadline} ${Math.abs(docket.daysTillDeadline) === 1 ? 'day' : 'days'}`
+                            )}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-black">{docket.lastUpdated}</td>
+                    </tr>
+                ))}
             </tbody>
         </table>
     );

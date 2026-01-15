@@ -1,7 +1,8 @@
-import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { createClient } from '@/utils/supabase/server';
+import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
+import { signOut } from '../../../../components/actions';
 import DocketContent from './DocketContent';
-import { signOut } from './actions';
 
 export default async function Docket() {
     const supabase = createClient();
@@ -25,5 +26,14 @@ export default async function Docket() {
         return redirect('/login?message=You do not have the required permissions');
     }
 
-    return <DocketContent userData={userData} signOut={signOut} />;
+    // Fetch all users for the staff dropdown
+    const { data: allUsers } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, role')
+        .eq('role', 'officer');
+
+    // Fetch all docket lookup data
+    const lookups = await getAllDocketLookups();
+
+    return <DocketContent userData={userData} signOut={signOut} users={allUsers || []} lookups={lookups} />;
 }

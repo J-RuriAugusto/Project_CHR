@@ -2,17 +2,18 @@ import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
+import LoginForm from './LoginForm';
 
 // Helper function to get base URL (move outside component)
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
   }
-  
+
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  
+
   return 'http://localhost:3000';
 }
 
@@ -48,12 +49,24 @@ export const Hero = async ({
           .select('email')
           .eq('email', email)
           .single();
-        
+
         if (emailExists) {
           return redirect('/?message=Incorrect password');
         }
       }
       return redirect('/?message=Could not authenticate user');
+    }
+
+    // Check user status
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('status')
+      .eq('email', email)
+      .single();
+
+    if (!userError && userData && userData.status === 'INACTIVE') {
+      await supabase.auth.signOut();
+      return redirect('/?message=Your account is inactive. Please contact an administrator.');
     }
 
     return redirect('/');
@@ -97,23 +110,30 @@ export const Hero = async ({
       </div>
 
       {/* Right side - Login Section */}
-      <div className="flex flex-1 bg-white lg:px-12 h-screen">
-        <div className="m-auto w-full max-w-sm lg:max-w-md flex flex-col items-center">
+      <div className="flex flex-1 bg-white lg:px-12 h-screen items-center justify-center">
+        <div className="w-full max-w-sm lg:max-w-md flex flex-col items-center">
           {/* Logo + Header */}
-          <div className="flex flex-col items-center mb-3">
-            <div className="relative w-36 h-28 lg:w-44 lg:h-36 -mb-2">
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative w-48 h-40 lg:w-56 lg:h-48 -mt-2">
               <Image
                 src="/cmms-logo.png"
                 alt="CMMS Logo"
                 fill
-                className="object-contain"
+                className="object-contain object-top"
                 priority
               />
             </div>
+<<<<<<< HEAD
             <h1 className="text-4xl lg:text-2xl font-bold text-midnightNavy mt-0 text-center">
               Login to Your Account
             </h1>
             <p className="text-center text-midnightNavy mt-1 text-lg lg:text-base leading-relaxed">
+=======
+            <h1 className="text-xl lg:text-2xl font-bold text-midnightNavy text-center -mt-20">
+              Login to Your Account
+            </h1>
+            <p className="text-center text-midnightNavy mt-2 text-sm lg:text-base leading-relaxed">
+>>>>>>> origin/main
               Manage and monitor CHR case records with role-based access
               to ensure confidentiality and security.
             </p>
@@ -125,6 +145,7 @@ export const Hero = async ({
               {redirect('/dashboard')}
             </>
           ) : (
+<<<<<<< HEAD
             <div className="space-y-4 w-full">
               {/* Email/Password Form */}
               <form action={signIn} className="space-y-4">
@@ -223,6 +244,13 @@ export const Hero = async ({
                 </div>
               )}
             </div>
+=======
+            <LoginForm
+              signInAction={signIn}
+              googleSignInAction={signInWithGoogle}
+              message={searchParams?.message}
+            />
+>>>>>>> origin/main
           )}
         </div>
       </div>

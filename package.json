@@ -6,9 +6,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "autoprefixer": "10.4.17",
+    "dotenv": "^17.2.3",
     "geist": "^1.2.1",
     "lucide-react": "^0.554.0",
     "next": "latest",
@@ -22,6 +24,8 @@
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
+    "browserslist": "^4.28.0",
+    "caniuse-lite": "^1.0.30001757",
     "encoding": "^0.1.13"
   }
 }

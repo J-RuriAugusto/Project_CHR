@@ -24,6 +24,7 @@ module.exports = {
         sky: "#D1ECF9",
         dustyBlue: '#5E8296',
         royalBlue: '#2479C9',
+        darkBlue: '#2B6397',
         royal: '#0D99FF',
         lightBlue: '#1994D7',
         navyBlue: '#073A55',
