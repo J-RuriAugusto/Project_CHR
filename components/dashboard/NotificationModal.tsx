@@ -103,7 +103,7 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
             case 'complete':
                 return '/icon12.png'; // Green checkmark - case completed
             case 'deadline':
-                return '/icon13.png'; // Yellow clock - deadline approaching
+                return '/icon19.png'; // Red alert icon - deadline is today (urgent!)
             case 'reminder':
                 return '/icon13.png'; // Yellow clock - reminder
             case 'overdue':
@@ -131,21 +131,6 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    // Check if notification is urgent (deadline or overdue)
-    const isUrgentNotification = (type: string) => {
-        return type === 'deadline' || type === 'overdue';
-    };
-
-    // Get background color based on notification type and read status
-    const getNotificationStyle = (type: string, isRead: boolean) => {
-        const isUrgent = isUrgentNotification(type);
-        if (!isRead) {
-            return isUrgent
-                ? { backgroundColor: '#FEE2E2', borderLeft: '4px solid #EF4444' } // Red urgent style
-                : { backgroundColor: '#EAF1FF' }; // Blue default style
-        }
-        return {};
-    };
 
     // Get visible notifications (paginated)
     const visibleNotifications = notifications.slice(0, visibleCount);
@@ -199,23 +184,20 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
                                             key={notification.id}
                                             onClick={() => handleNotificationClick(notification)}
                                             className="mx-5 mb-2 px-4 py-3.5 rounded-md cursor-pointer transition flex items-center gap-3.5 hover:opacity-80"
-                                            style={getNotificationStyle(notification.notification_type, false)}
+                                            style={{ backgroundColor: '#EAF1FF' }}
                                         >
                                             <img src={getIconPath(notification.notification_type)} alt="" className="w-12 h-12" />
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-medium leading-snug" style={{ color: isUrgentNotification(notification.notification_type) ? '#991B1B' : '#636B78' }}>
-                                                    <span className="font-bold" style={{ color: isUrgentNotification(notification.notification_type) ? '#7F1D1D' : '#0F2348' }}>{notification.title}</span>
+                                                <p className="font-medium leading-snug" style={{ color: '#636B78' }}>
+                                                    <span className="font-bold" style={{ color: '#0F2348' }}>{notification.title}</span>
                                                     <br />
                                                     {notification.message}
                                                 </p>
-                                                <p className="text-sm leading-snug" style={{ color: isUrgentNotification(notification.notification_type) ? '#991B1B' : '#636B78' }}>
+                                                <p className="text-sm leading-snug" style={{ color: '#636B78' }}>
                                                     {formatDate(notification.created_at)}
                                                 </p>
                                             </div>
-                                            <div
-                                                className="w-3 h-3 rounded-full flex-shrink-0 ml-2"
-                                                style={{ backgroundColor: isUrgentNotification(notification.notification_type) ? '#EF4444' : '#1B61E3' }}
-                                            ></div>
+                                            <div className="w-3 h-3 rounded-full flex-shrink-0 ml-2" style={{ backgroundColor: '#1B61E3' }}></div>
                                         </div>
                                     ))}
                                 </div>
