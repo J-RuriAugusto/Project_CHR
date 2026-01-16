@@ -13,7 +13,7 @@ export interface Notification {
     title: string;
     message: string;
     is_read: boolean;
-    notification_type: 'new_case' | 'assigned' | 'deadline' | 'overdue' | 'complete' | 'deleted';
+    notification_type: 'new_case' | 'assigned' | 'deadline' | 'overdue' | 'complete' | 'deleted' | 'reminder';
     docket_id: string | null;
     created_at: string;
     docket?: {
@@ -422,4 +422,185 @@ export async function markAllNotificationsAsRead(): Promise<NotificationResult> 
             error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
+}
+
+// ==========================================
+// LEGAL INVESTIGATION REMINDER SCHEDULE
+// ==========================================
+
+interface ReminderConfig {
+    day: number;
+    daysRemaining: number;
+    emailBody: (docketNumber: string) => string;
+    notificationMessage: (docketNumber: string) => string;
+}
+
+const LEGAL_INVESTIGATION_REMINDERS: ReminderConfig[] = [
+    {
+        day: 45,
+        daysRemaining: 15,
+        emailBody: (dn) => `It has been 45 days since ${dn} was docketed. You only have 15 calendar days left to conclude this investigation.`,
+        notificationMessage: (dn) => `15 days left to complete case ${dn}.`
+    },
+    {
+        day: 50,
+        daysRemaining: 10,
+        emailBody: (dn) => `It has been 50 days since ${dn} was docketed. You only have 10 calendar days left to conclude this investigation.`,
+        notificationMessage: (dn) => `10 days left to complete case ${dn}.`
+    },
+    {
+        day: 55,
+        daysRemaining: 5,
+        emailBody: (dn) => `It has been 55 days since ${dn} was docketed. You only have 5 calendar days left to conclude this investigation.`,
+        notificationMessage: (dn) => `5 days left to complete case ${dn}.`
+    },
+    {
+        day: 58,
+        daysRemaining: 2,
+        emailBody: (dn) => `It has been 58 days since ${dn} was docketed. You only have 2 calendar days left to conclude this investigation.`,
+        notificationMessage: (dn) => `2 days left to complete case ${dn}.`
+    },
+    {
+        day: 60,
+        daysRemaining: 0,
+        emailBody: (dn) => `It has been 60 days since ${dn} was docketed. Today is the deadline for you to close this investigation and submit the Final Investigation Report for approval.`,
+        notificationMessage: (dn) => `Today is the deadline of case ${dn}.`
+    }
+];
+
+// ==========================================
+// CREATE LEGAL INVESTIGATION REMINDERS
+// ==========================================
+
+/**
+ * Creates email and notification reminders for Legal Investigation cases
+ * based on days since docketing (counting from day after date_received).
+ * 
+ * - Emails go to assigned officers only
+ * - Notifications go to assigned officers + leadership roles (non-admin/non-officer)
+ */
+export async function createLegalInvestigationReminders(
+    docketId: string,
+    docketNumber: string,
+    daysSinceDocketing: number,
+    assignedOfficerIds: string[]
+): Promise<NotificationResult> {
+    const supabase = createClient();
+
+    console.log('=== CREATING LEGAL INVESTIGATION REMINDERS ===');
+    console.log('Docket ID:', docketId);
+    console.log('Docket Number:', docketNumber);
+    console.log('Days Since Docketing:', daysSinceDocketing);
+    console.log('Assigned Officers:', assignedOfficerIds);
+
+    // Find matching reminder config
+    const reminderConfig = LEGAL_INVESTIGATION_REMINDERS.find(r => r.day === daysSinceDocketing);
+
+    if (!reminderConfig) {
+        console.log(`No reminder configured for day ${daysSinceDocketing}`);
+        return { success: true, message: 'No reminder needed for this day' };
+    }
+
+    try {
+        // 1. Create pending emails for assigned officers only
+        const pendingEmails = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            docket_id: docketId,
+            email_type: 'investigation_reminder',
+            subject: `Case Reminder: ${docketNumber}`,
+            body: reminderConfig.emailBody(docketNumber),
+            status: 'PENDING'
+        }));
+
+        if (pendingEmails.length > 0) {
+            const { error: emailError } = await supabase
+                .from('pending_emails')
+                .insert(pendingEmails);
+
+            if (emailError) {
+                console.error('Error creating reminder emails:', emailError);
+            } else {
+                console.log(`Created ${pendingEmails.length} pending emails for officers`);
+            }
+        }
+
+        // 2. Create notifications for assigned officers
+        const officerNotifications = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            title: 'Case Reminder',
+            message: reminderConfig.notificationMessage(docketNumber),
+            notification_type: 'reminder',
+            docket_id: docketId,
+            is_read: false
+        }));
+
+        if (officerNotifications.length > 0) {
+            const { error: officerNotifError } = await supabase
+                .from('notifications')
+                .insert(officerNotifications);
+
+            if (officerNotifError) {
+                console.error('Error creating officer notifications:', officerNotifError);
+            } else {
+                console.log(`Created ${officerNotifications.length} notifications for officers`);
+            }
+        }
+
+        // 3. Get leadership roles (non-admin, non-officer) for notifications
+        const leadershipRoles = ['regional_director', 'investigation_chief', 'legal_chief', 'records_officer'];
+
+        const { data: leadershipUsers, error: usersError } = await supabase
+            .from('users')
+            .select('id')
+            .in('role', leadershipRoles)
+            .eq('status', 'ACTIVE');
+
+        if (usersError) {
+            console.error('Error fetching leadership users:', usersError);
+        }
+
+        // 4. Create notifications for leadership (exclude any who are also assigned officers)
+        if (leadershipUsers && leadershipUsers.length > 0) {
+            const officerIdSet = new Set(assignedOfficerIds);
+            const leadershipNotifications = leadershipUsers
+                .filter(user => !officerIdSet.has(user.id)) // Avoid duplicates
+                .map(user => ({
+                    user_id: user.id,
+                    title: 'Case Reminder',
+                    message: reminderConfig.notificationMessage(docketNumber),
+                    notification_type: 'reminder',
+                    docket_id: docketId,
+                    is_read: false
+                }));
+
+            if (leadershipNotifications.length > 0) {
+                const { error: leadershipNotifError } = await supabase
+                    .from('notifications')
+                    .insert(leadershipNotifications);
+
+                if (leadershipNotifError) {
+                    console.error('Error creating leadership notifications:', leadershipNotifError);
+                } else {
+                    console.log(`Created ${leadershipNotifications.length} notifications for leadership`);
+                }
+            }
+        }
+
+        console.log('=== LEGAL INVESTIGATION REMINDERS CREATED SUCCESSFULLY ===');
+        return { success: true, message: `Reminders created for day ${daysSinceDocketing}` };
+
+    } catch (error) {
+        console.error('Unexpected error creating legal investigation reminders:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+/**
+ * Gets the reminder days configuration (for external use by cron jobs)
+ */
+export function getLegalInvestigationReminderDays(): number[] {
+    return LEGAL_INVESTIGATION_REMINDERS.map(r => r.day);
 }
