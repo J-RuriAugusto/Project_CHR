@@ -601,6 +601,6 @@ export async function createLegalInvestigationReminders(
 /**
  * Gets the reminder days configuration (for external use by cron jobs)
  */
-export function getLegalInvestigationReminderDays(): number[] {
+export async function getLegalInvestigationReminderDays(): Promise<number[]> {
     return LEGAL_INVESTIGATION_REMINDERS.map(r => r.day);
 }

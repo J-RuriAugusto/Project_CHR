@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     console.log('Execution time:', new Date().toISOString());
 
     const supabase = createClient();
-    const reminderDays = getLegalInvestigationReminderDays(); // [45, 50, 55, 58, 60]
+    const reminderDays = await getLegalInvestigationReminderDays(); // [45, 50, 55, 58, 60]
 
     try {
         // 1. Get the "Legal Investigation" request type ID
