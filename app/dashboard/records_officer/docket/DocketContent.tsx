@@ -32,18 +32,21 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
     const basePath = `/dashboard/${userData.role}`;
     const currentPath = usePathname();
     const searchQuery = searchParams.get('search') || '';
-    const initialStatus = searchParams.get('status');
+    const initialStatuses = searchParams.getAll('status');
+    const initialDateStart = searchParams.get('dateStart') || '';
+    const initialDateEnd = searchParams.get('dateEnd') || '';
+    const excludeCompleted = searchParams.get('excludeCompleted') === 'true';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedDocketId, setSelectedDocketId] = useState<string | null>(null);
     const [dockets, setDockets] = useState<DocketListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     // Multi-select filter arrays
-    const [filterStatuses, setFilterStatuses] = useState<string[]>(initialStatus ? [initialStatus] : []);
+    const [filterStatuses, setFilterStatuses] = useState<string[]>(initialStatuses.length > 0 ? initialStatuses : []);
     const [filterTypes, setFilterTypes] = useState<string[]>([]);
-    // Date range filter
-    const [dateRangeStart, setDateRangeStart] = useState<string>('');
-    const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
+    // Date range filter (for deadline)
+    const [dateRangeStart, setDateRangeStart] = useState<string>(initialDateStart);
+    const [dateRangeEnd, setDateRangeEnd] = useState<string>(initialDateEnd);
     // Dropdown open states
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
@@ -196,24 +199,27 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
         // 2. Type Filter
         const typeMatch = filterTypes.length === 0 || filterTypes.includes(docket.typeOfRequest);
 
-        // 3. Date Filter
+        // 3. Date Filter (on deadline field)
         let dateMatch = true;
         if (dateRangeStart || dateRangeEnd) {
-            const docketDate = docket.dateReceived ? new Date(docket.dateReceived) : null;
-            if (docketDate) {
+            const deadlineDate = docket.deadline ? new Date(docket.deadline) : null;
+            if (deadlineDate) {
                 if (dateRangeStart) {
                     const startDate = new Date(dateRangeStart);
-                    if (docketDate < startDate) dateMatch = false;
+                    if (deadlineDate < startDate) dateMatch = false;
                 }
                 if (dateRangeEnd) {
                     const endDate = new Date(dateRangeEnd);
                     endDate.setHours(23, 59, 59, 999); // Include the entire end day
-                    if (docketDate > endDate) dateMatch = false;
+                    if (deadlineDate > endDate) dateMatch = false;
                 }
             } else {
-                dateMatch = false; // No date received, exclude from date-filtered results
+                dateMatch = false; // No deadline, exclude from date-filtered results
             }
         }
+
+        // 3b. Exclude Completed filter
+        const completedMatch = !excludeCompleted || docket.status !== 'Completed';
 
         // 4. Search Filter (Comma-separated AND logic)
         let searchMatch = true;
@@ -247,7 +253,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
             }
         }
 
-        return statusMatch && typeMatch && dateMatch && searchMatch;
+        return statusMatch && typeMatch && dateMatch && completedMatch && searchMatch;
     });
 
     // Pagination calculations

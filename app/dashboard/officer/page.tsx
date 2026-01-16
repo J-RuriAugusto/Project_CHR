@@ -81,7 +81,7 @@ export default async function OfficerDashboard() {
 
                         {/* Dashboard Cards */}
                         <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                            <Link href="/dashboard/officer/docket?status=Active" className="block">
+                            <Link href="/dashboard/officer/docket?status=Active&status=Urgent&status=Due" className="block">
                                 <div className="bg-softBlue p-4 rounded-lg shadow relative overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full">
                                     <div className="absolute top-4 right-4 shadow-sm">
                                         <Image
@@ -96,6 +96,7 @@ export default async function OfficerDashboard() {
                                     <div className="pt-10">
                                         <h6 className="text-6xl text-steelBlue font-semibold">{stats.activeCases.count}</h6>
                                         <h3 className="text-base text-steelBlue font-semibold">Total Active Cases</h3>
+                                        <p className="text-xs text-steelBlue font-normal">(incl. Urgent and Due)</p>
                                         <p className="text-sm text-skyRoyal font-semibold">+{stats.activeCases.thisMonth} this month</p>
                                     </div>
                                 </div>

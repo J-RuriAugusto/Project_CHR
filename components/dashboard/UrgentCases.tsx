@@ -127,13 +127,29 @@ export default function UrgentCases({ dueThisWeek, dueLastWeek, basePath, users,
     // Reducing estimate to 4rem based on visual feedback that 5rem allowed too many items.
     const CARD_FULL_HEIGHT_REM = 4;
 
+    // Calculate date range for View All: start of last week to end of this week
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    // Start of last week (previous Sunday)
+    const startOfLastWeek = new Date(today);
+    startOfLastWeek.setDate(today.getDate() - dayOfWeek - 7);
+
+    // End of this week (this Saturday)
+    const endOfThisWeek = new Date(today);
+    endOfThisWeek.setDate(today.getDate() + (6 - dayOfWeek));
+
+    // Format dates as YYYY-MM-DD for URL params
+    const formatDateForUrl = (d: Date) => d.toISOString().split('T')[0];
+    const viewAllUrl = `${basePath}?dateStart=${formatDateForUrl(startOfLastWeek)}&dateEnd=${formatDateForUrl(endOfThisWeek)}&excludeCompleted=true`;
+
     return (
         <div className="flex-1 pr-0 lg:pr-6 flex flex-col h-full">
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h2 className="text-base text-midnightNavy font-semibold">
-                    Urgent Cases
+                    Urgent and Due Cases
                 </h2>
-                <Link href={`${basePath}?status=Urgent`} className="text-sm text-slateGray font-semibold">
+                <Link href={viewAllUrl} className="text-sm text-slateGray font-semibold">
                     View All
                 </Link>
             </div>
