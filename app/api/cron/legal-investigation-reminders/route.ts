@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60 seconds for processing
 
 /**
- * Calculate days since docketing (counting starts ON date_received, so day 1 = docket date)
+ * Calculate days since docketing (day 0 = docket date)
+ * Day 45 means 45 days after docketing, so 15 days remain for 60-day deadline
  */
 function getDaysSinceDocketing(dateReceived: string): number {
     const received = new Date(dateReceived);
@@ -21,9 +22,9 @@ function getDaysSinceDocketing(dateReceived: string): number {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Day 1 is the date_received, so we add 1 to the difference
+    // Day 0 is the date_received, so no +1
     const diffTime = today.getTime() - received.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;
 }
