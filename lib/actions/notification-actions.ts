@@ -430,41 +430,39 @@ export async function markAllNotificationsAsRead(): Promise<NotificationResult> 
 
 interface ReminderConfig {
     day: number;
-    daysRemaining: number;
-    emailBody: (docketNumber: string) => string;
-    notificationMessage: (docketNumber: string) => string;
+    emailBody: (docketNumber: string, daysRemaining: number) => string;
+    notificationMessage: (docketNumber: string, daysRemaining: number) => string;
 }
 
 const LEGAL_INVESTIGATION_REMINDERS: ReminderConfig[] = [
     {
         day: 45,
-        daysRemaining: 15,
-        emailBody: (dn) => `It has been 45 days since ${dn} was docketed. You only have 15 calendar days left to conclude this investigation.`,
-        notificationMessage: (dn) => `15 days left to complete case ${dn}.`
+        emailBody: (dn, days) => `It has been 45 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
     },
     {
         day: 50,
-        daysRemaining: 10,
-        emailBody: (dn) => `It has been 50 days since ${dn} was docketed. You only have 10 calendar days left to conclude this investigation.`,
-        notificationMessage: (dn) => `10 days left to complete case ${dn}.`
+        emailBody: (dn, days) => `It has been 50 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
     },
     {
         day: 55,
-        daysRemaining: 5,
-        emailBody: (dn) => `It has been 55 days since ${dn} was docketed. You only have 5 calendar days left to conclude this investigation.`,
-        notificationMessage: (dn) => `5 days left to complete case ${dn}.`
+        emailBody: (dn, days) => `It has been 55 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
     },
     {
         day: 58,
-        daysRemaining: 2,
-        emailBody: (dn) => `It has been 58 days since ${dn} was docketed. You only have 2 calendar days left to conclude this investigation.`,
-        notificationMessage: (dn) => `2 days left to complete case ${dn}.`
+        emailBody: (dn, days) => `It has been 58 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
     },
     {
         day: 60,
-        daysRemaining: 0,
-        emailBody: (dn) => `It has been 60 days since ${dn} was docketed. Today is the deadline for you to close this investigation and submit the Final Investigation Report for approval.`,
-        notificationMessage: (dn) => `Today is the deadline of case ${dn}.`
+        emailBody: (dn, days) => days === 0
+            ? `It has been 60 days since ${dn} was docketed. Today is the deadline for you to close this investigation and submit the Final Investigation Report for approval.`
+            : `It has been 60 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => days === 0
+            ? `Today is the deadline of case ${dn}.`
+            : `${days} days left to complete case ${dn}.`
     }
 ];
 
@@ -483,14 +481,24 @@ export async function createLegalInvestigationReminders(
     docketId: string,
     docketNumber: string,
     daysSinceDocketing: number,
-    assignedOfficerIds: string[]
+    assignedOfficerIds: string[],
+    deadline: string // ISO date string (YYYY-MM-DD)
 ): Promise<NotificationResult> {
     const supabase = createClient();
+
+    // Calculate actual days remaining from deadline
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysRemaining = Math.floor((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     console.log('=== CREATING LEGAL INVESTIGATION REMINDERS ===');
     console.log('Docket ID:', docketId);
     console.log('Docket Number:', docketNumber);
     console.log('Days Since Docketing:', daysSinceDocketing);
+    console.log('Deadline:', deadline);
+    console.log('Days Remaining (calculated):', daysRemaining);
     console.log('Assigned Officers:', assignedOfficerIds);
 
     // Find matching reminder config
@@ -508,7 +516,7 @@ export async function createLegalInvestigationReminders(
             docket_id: docketId,
             email_type: 'investigation_reminder',
             subject: `Case Reminder: ${docketNumber}`,
-            body: reminderConfig.emailBody(docketNumber),
+            body: reminderConfig.emailBody(docketNumber, daysRemaining),
             status: 'PENDING'
         }));
 
@@ -528,7 +536,7 @@ export async function createLegalInvestigationReminders(
         const officerNotifications = assignedOfficerIds.map(officerId => ({
             user_id: officerId,
             title: 'Case Reminder',
-            message: reminderConfig.notificationMessage(docketNumber),
+            message: reminderConfig.notificationMessage(docketNumber, daysRemaining),
             notification_type: 'reminder',
             docket_id: docketId,
             is_read: false
@@ -567,7 +575,7 @@ export async function createLegalInvestigationReminders(
                 .map(user => ({
                     user_id: user.id,
                     title: 'Case Reminder',
-                    message: reminderConfig.notificationMessage(docketNumber),
+                    message: reminderConfig.notificationMessage(docketNumber, daysRemaining),
                     notification_type: 'reminder',
                     docket_id: docketId,
                     is_read: false

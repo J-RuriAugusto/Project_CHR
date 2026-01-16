@@ -311,10 +311,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         const receivedDate = new Date(dateReceivedStr);
         if (isNaN(receivedDate.getTime())) return;
 
-        // Add 1 day to start counting from the next day
-        const startDate = new Date(receivedDate);
-        startDate.setDate(startDate.getDate() + 1);
-
+        // Day 1 = date_received, deadline is 60 or 120 days from day 1
         let daysToAdd = 0;
         if (requestType.name === 'Legal Assistance / OPS') {
             daysToAdd = 120;
@@ -324,7 +321,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
             return; // Don't autofill for other types
         }
 
-        const deadlineDate = new Date(startDate);
+        const deadlineDate = new Date(receivedDate);
         deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
 
         setDeadline(deadlineDate.toLocaleDateString('en-US'));

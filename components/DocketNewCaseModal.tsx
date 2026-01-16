@@ -199,10 +199,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
         const receivedDate = new Date(dateReceivedStr);
         if (isNaN(receivedDate.getTime())) return;
 
-        // Add 1 day to start counting from the next day
-        const startDate = new Date(receivedDate);
-        startDate.setDate(startDate.getDate() + 1);
-
+        // Day 1 = date_received, deadline is 60 or 120 days from day 1
         let daysToAdd = 0;
         if (requestType.name === 'Legal Assistance / OPS') {
             daysToAdd = 120;
@@ -212,7 +209,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             return; // Don't autofill for other types
         }
 
-        const deadlineDate = new Date(startDate);
+        const deadlineDate = new Date(receivedDate);
         deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
 
         setDeadline(deadlineDate.toLocaleDateString('en-US'));
@@ -726,7 +723,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
                                                         if (selectedType) {
                                                             const receivedDate = new Date(dateReceived);
                                                             if (!isNaN(receivedDate.getTime())) {
-                                                                // Check if it's Legal Investigation (60 days) or Legal Assistance/OPS (120 days)
+                                                                // Day 1 = date_received, deadline is 60 or 120 days from day 1
                                                                 const daysToAdd = selectedType.name === 'Legal Investigation' ? 60 : 120;
                                                                 const deadlineDate = new Date(receivedDate);
                                                                 deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);

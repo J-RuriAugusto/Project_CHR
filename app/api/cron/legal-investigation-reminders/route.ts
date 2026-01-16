@@ -12,21 +12,18 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow up to 60 seconds for processing
 
 /**
- * Calculate days since docketing (counting starts the day AFTER date_received)
+ * Calculate days since docketing (counting starts ON date_received, so day 1 = docket date)
  */
 function getDaysSinceDocketing(dateReceived: string): number {
     const received = new Date(dateReceived);
     received.setHours(0, 0, 0, 0);
 
-    // Add 1 day to start counting from day after docketing
-    const startDate = new Date(received);
-    startDate.setDate(startDate.getDate() + 1);
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const diffTime = today.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because day 1 is the first day
+    // Day 1 is the date_received, so we add 1 to the difference
+    const diffTime = today.getTime() - received.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
     return diffDays;
 }
@@ -73,6 +70,7 @@ export async function GET(request: NextRequest) {
                 id,
                 docket_number,
                 date_received,
+                deadline,
                 docket_staff (
                     user_id
                 )
@@ -107,7 +105,8 @@ export async function GET(request: NextRequest) {
                     docket.id,
                     docket.docket_number,
                     daysSinceDocketing,
-                    assignedOfficerIds
+                    assignedOfficerIds,
+                    docket.deadline
                 );
 
                 results.push({

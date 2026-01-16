@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
             .select(`
                 id,
                 docket_number,
+                deadline,
                 docket_staff (
                     user_id
                 )
@@ -74,7 +75,8 @@ export async function POST(request: NextRequest) {
             docket.id,
             docket.docket_number,
             daysSinceDocketing,
-            assignedOfficerIds
+            assignedOfficerIds,
+            docket.deadline
         );
 
         return NextResponse.json({
