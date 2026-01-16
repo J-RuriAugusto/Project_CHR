@@ -26,6 +26,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={sourceSans.variable}>
       <body className="font-sans bg-background text-foreground">
+        <script 
+          src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"/>
         <main className="min-h-screen">{children}</main>
       </body>
     </html>

@@ -878,7 +878,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                         ? `Sector (${selectedSectors.length} applied)`
                         : 'Sector (0 applied)'}
                 </span>
-                <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <img src="/icon16.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </button>
 
             {isOpen && (
@@ -1084,7 +1084,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                    <img src="/icon16.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                                 </div>
                                             </div>
 
@@ -1183,7 +1183,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    <img src="/icon18.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                    <img src="/icon16.png" alt="Dropdown" className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                                 </div>
                                             </div>
 
@@ -1473,7 +1473,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                                                                 })()
                                                                                 : 'Assign the case to...'}
                                                                         </span>
-                                                                        <img src="/icon18.png" alt="Dropdown" className="w-4 h-4" />
+                                                                        <img src="/icon16.png" alt="Dropdown" className="w-4 h-4" />
                                                                     </button>
 
                                                                     {openStaffDropdown === index && (
