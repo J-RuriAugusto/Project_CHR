@@ -579,8 +579,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
         if (!docketNumber.trim()) {
             errors.push('Docket Number is required');
         } else {
-            // Check format
-            const pattern = new RegExp(`^CHR-VII-${currentYear}-\\d+$`);
+            // Check format - allow any year (CHR-VII-YYYY-NUMBER)
+            const pattern = new RegExp(`^CHR-VII-\\d{4}-\\d+$`);
             if (!pattern.test(docketNumber)) {
                 errors.push('Docket Number format is invalid. Expected format: CHR-VII-YEAR-NUMBER');
             } else if (docketNumber !== originalDocketNumber) {
