@@ -3,10 +3,13 @@ import { createClient } from '@/utils/supabase/server';
 import {
     createLegalInvestigationReminders,
     getLegalInvestigationReminderDays,
+    createLegalAssistanceReminders,
+    getLegalAssistanceReminderDays,
     createOverdueReminders
 } from '@/lib/actions/notification-actions';
 
-// Vercel Cron Job - runs daily to check for Legal Investigation cases needing reminders
+// Vercel Cron Job - runs daily to check for cases needing reminders
+// Handles both Legal Investigation (60-day) and Legal Assistance / OPS (120-day) cases
 // Configured in vercel.json
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +17,6 @@ export const maxDuration = 60; // Allow up to 60 seconds for processing
 
 /**
  * Calculate days since docketing (day 0 = docket date)
- * Day 45 means 45 days after docketing, so 15 days remain for 60-day deadline
  */
 function getDaysSinceDocketing(dateReceived: string): number {
     const received = new Date(dateReceived);
@@ -23,7 +25,6 @@ function getDaysSinceDocketing(dateReceived: string): number {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Day 0 is the date_received, so no +1
     const diffTime = today.getTime() - received.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
@@ -51,112 +52,149 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    // If CRON_SECRET is set, validate it
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
         console.log('Unauthorized cron request');
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('=== LEGAL INVESTIGATION REMINDERS CRON JOB STARTED ===');
+    console.log('=== CASE REMINDERS CRON JOB STARTED ===');
     console.log('Execution time:', new Date().toISOString());
 
     const supabase = createClient();
-    const reminderDays = await getLegalInvestigationReminderDays(); // [45, 50, 55, 58, 60]
+
+    // Get reminder days for both case types
+    const legalInvestigationDays = await getLegalInvestigationReminderDays(); // [45, 50, 55, 58, 60]
+    const legalAssistanceDays = await getLegalAssistanceReminderDays(); // [100, 110, 115, 118, 120]
+
+    const results: { docketNumber: string; caseType: string; reminderType: string; days: number; result: string }[] = [];
 
     try {
-        // 1. Get the "Legal Investigation" request type ID
-        const { data: legalInvestigationType, error: typeError } = await supabase
+        // ==========================================
+        // PROCESS LEGAL INVESTIGATION CASES (60-day)
+        // ==========================================
+
+        const { data: legalInvestigationType } = await supabase
             .from('request_types')
             .select('id')
             .eq('name', 'Legal Investigation')
             .single();
 
-        if (typeError || !legalInvestigationType) {
-            console.error('Error fetching Legal Investigation type:', typeError);
-            return NextResponse.json({
-                error: 'Legal Investigation type not found'
-            }, { status: 500 });
-        }
+        if (legalInvestigationType) {
+            const { data: investigationDockets } = await supabase
+                .from('dockets')
+                .select(`
+                    id,
+                    docket_number,
+                    date_received,
+                    deadline,
+                    docket_staff (user_id)
+                `)
+                .eq('type_of_request_id', legalInvestigationType.id)
+                .eq('status', 'PENDING');
 
-        const typeId = legalInvestigationType.id;
-        console.log('Legal Investigation type ID:', typeId);
+            console.log(`Found ${investigationDockets?.length || 0} pending Legal Investigation dockets`);
 
-        // 2. Fetch all PENDING Legal Investigation dockets
-        const { data: dockets, error: docketsError } = await supabase
-            .from('dockets')
-            .select(`
-                id,
-                docket_number,
-                date_received,
-                deadline,
-                docket_staff (
-                    user_id
-                )
-            `)
-            .eq('type_of_request_id', typeId)
-            .eq('status', 'PENDING');
+            for (const docket of investigationDockets || []) {
+                const daysSinceDocketing = getDaysSinceDocketing(docket.date_received);
+                const daysPastDeadline = getDaysPastDeadline(docket.deadline);
+                const assignedOfficerIds = (docket.docket_staff || []).map((staff: any) => staff.user_id);
 
-        if (docketsError) {
-            console.error('Error fetching dockets:', docketsError);
-            return NextResponse.json({
-                error: 'Failed to fetch dockets'
-            }, { status: 500 });
-        }
+                // Pre-deadline reminders
+                if (legalInvestigationDays.includes(daysSinceDocketing)) {
+                    console.log(`[Legal Investigation] Day ${daysSinceDocketing} reminder for ${docket.docket_number}`);
+                    const result = await createLegalInvestigationReminders(
+                        docket.id, docket.docket_number, daysSinceDocketing, assignedOfficerIds, docket.deadline
+                    );
+                    results.push({
+                        docketNumber: docket.docket_number,
+                        caseType: 'Legal Investigation',
+                        reminderType: 'pre-deadline',
+                        days: daysSinceDocketing,
+                        result: result.success ? 'success' : (result.error || 'failed')
+                    });
+                }
 
-        console.log(`Found ${dockets?.length || 0} pending Legal Investigation dockets`);
-
-        const results: { docketNumber: string; type: string; days: number; result: string }[] = [];
-
-        // 3. Process each docket
-        for (const docket of dockets || []) {
-            const daysSinceDocketing = getDaysSinceDocketing(docket.date_received);
-            const daysPastDeadline = getDaysPastDeadline(docket.deadline);
-            const assignedOfficerIds = (docket.docket_staff || []).map((staff: any) => staff.user_id);
-
-            console.log(`Docket ${docket.docket_number}: ${daysSinceDocketing} days since docketing, ${daysPastDeadline} days past deadline`);
-
-            // A. Check for pre-deadline reminders (day 45, 50, 55, 58, 60)
-            if (reminderDays.includes(daysSinceDocketing)) {
-                console.log(`Sending day ${daysSinceDocketing} pre-deadline reminder for ${docket.docket_number}`);
-
-                const result = await createLegalInvestigationReminders(
-                    docket.id,
-                    docket.docket_number,
-                    daysSinceDocketing,
-                    assignedOfficerIds,
-                    docket.deadline
-                );
-
-                results.push({
-                    docketNumber: docket.docket_number,
-                    type: 'pre-deadline',
-                    days: daysSinceDocketing,
-                    result: result.success ? 'success' : (result.error || 'failed')
-                });
-            }
-
-            // B. Check for post-deadline overdue reminders (every 30 days: 30, 60, 90, 120...)
-            if (daysPastDeadline > 0 && daysPastDeadline % 30 === 0) {
-                console.log(`Sending ${daysPastDeadline}-day overdue reminder for ${docket.docket_number}`);
-
-                const result = await createOverdueReminders(
-                    docket.id,
-                    docket.docket_number,
-                    daysPastDeadline,
-                    assignedOfficerIds
-                );
-
-                results.push({
-                    docketNumber: docket.docket_number,
-                    type: 'overdue',
-                    days: daysPastDeadline,
-                    result: result.success ? 'success' : (result.error || 'failed')
-                });
+                // Overdue reminders (every 30 days past deadline)
+                if (daysPastDeadline > 0 && daysPastDeadline % 30 === 0) {
+                    console.log(`[Legal Investigation] ${daysPastDeadline}-day overdue reminder for ${docket.docket_number}`);
+                    const result = await createOverdueReminders(
+                        docket.id, docket.docket_number, daysPastDeadline, assignedOfficerIds
+                    );
+                    results.push({
+                        docketNumber: docket.docket_number,
+                        caseType: 'Legal Investigation',
+                        reminderType: 'overdue',
+                        days: daysPastDeadline,
+                        result: result.success ? 'success' : (result.error || 'failed')
+                    });
+                }
             }
         }
 
-        console.log('=== LEGAL INVESTIGATION REMINDERS CRON JOB COMPLETED ===');
-        console.log(`Processed ${results.length} reminders`);
+        // ==========================================
+        // PROCESS LEGAL ASSISTANCE / OPS CASES (120-day)
+        // ==========================================
+
+        const { data: legalAssistanceType } = await supabase
+            .from('request_types')
+            .select('id')
+            .eq('name', 'Legal Assistance / OPS')
+            .single();
+
+        if (legalAssistanceType) {
+            const { data: assistanceDockets } = await supabase
+                .from('dockets')
+                .select(`
+                    id,
+                    docket_number,
+                    date_received,
+                    deadline,
+                    docket_staff (user_id)
+                `)
+                .eq('type_of_request_id', legalAssistanceType.id)
+                .eq('status', 'PENDING');
+
+            console.log(`Found ${assistanceDockets?.length || 0} pending Legal Assistance / OPS dockets`);
+
+            for (const docket of assistanceDockets || []) {
+                const daysSinceDocketing = getDaysSinceDocketing(docket.date_received);
+                const daysPastDeadline = getDaysPastDeadline(docket.deadline);
+                const assignedOfficerIds = (docket.docket_staff || []).map((staff: any) => staff.user_id);
+
+                // Pre-deadline reminders
+                if (legalAssistanceDays.includes(daysSinceDocketing)) {
+                    console.log(`[Legal Assistance] Day ${daysSinceDocketing} reminder for ${docket.docket_number}`);
+                    const result = await createLegalAssistanceReminders(
+                        docket.id, docket.docket_number, daysSinceDocketing, assignedOfficerIds, docket.deadline
+                    );
+                    results.push({
+                        docketNumber: docket.docket_number,
+                        caseType: 'Legal Assistance / OPS',
+                        reminderType: 'pre-deadline',
+                        days: daysSinceDocketing,
+                        result: result.success ? 'success' : (result.error || 'failed')
+                    });
+                }
+
+                // Overdue reminders (every 30 days past deadline)
+                if (daysPastDeadline > 0 && daysPastDeadline % 30 === 0) {
+                    console.log(`[Legal Assistance] ${daysPastDeadline}-day overdue reminder for ${docket.docket_number}`);
+                    const result = await createOverdueReminders(
+                        docket.id, docket.docket_number, daysPastDeadline, assignedOfficerIds
+                    );
+                    results.push({
+                        docketNumber: docket.docket_number,
+                        caseType: 'Legal Assistance / OPS',
+                        reminderType: 'overdue',
+                        days: daysPastDeadline,
+                        result: result.success ? 'success' : (result.error || 'failed')
+                    });
+                }
+            }
+        }
+
+        console.log('=== CASE REMINDERS CRON JOB COMPLETED ===');
+        console.log(`Total reminders processed: ${results.length}`);
 
         return NextResponse.json({
             success: true,
@@ -171,3 +209,4 @@ export async function GET(request: NextRequest) {
         }, { status: 500 });
     }
 }
+

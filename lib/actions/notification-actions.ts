@@ -614,6 +614,190 @@ export async function getLegalInvestigationReminderDays(): Promise<number[]> {
 }
 
 // ==========================================
+// LEGAL ASSISTANCE / OPS REMINDER SCHEDULE
+// ==========================================
+
+const LEGAL_ASSISTANCE_REMINDERS: ReminderConfig[] = [
+    {
+        day: 100,
+        emailBody: (dn, days) => `It has been 100 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
+    },
+    {
+        day: 110,
+        emailBody: (dn, days) => `It has been 110 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
+    },
+    {
+        day: 115,
+        emailBody: (dn, days) => `It has been 115 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
+    },
+    {
+        day: 118,
+        emailBody: (dn, days) => `It has been 118 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => `${days} days left to complete case ${dn}.`
+    },
+    {
+        day: 120,
+        emailBody: (dn, days) => days === 0
+            ? `It has been 120 days since ${dn} was docketed. Today is the deadline for you to close this investigation and submit the Final Investigation Report for approval.`
+            : `It has been 120 days since ${dn} was docketed. You only have ${days} calendar days left to conclude this investigation.`,
+        notificationMessage: (dn, days) => days === 0
+            ? `Today is the deadline of case ${dn}.`
+            : `${days} days left to complete case ${dn}.`
+    }
+];
+
+// ==========================================
+// CREATE LEGAL ASSISTANCE / OPS REMINDERS
+// ==========================================
+
+/**
+ * Creates email and notification reminders for Legal Assistance / OPS cases
+ * based on days since docketing.
+ * 
+ * - Emails go to assigned officers only
+ * - Notifications go to assigned officers + non-admin roles
+ */
+export async function createLegalAssistanceReminders(
+    docketId: string,
+    docketNumber: string,
+    daysSinceDocketing: number,
+    assignedOfficerIds: string[],
+    deadline: string
+): Promise<NotificationResult> {
+    const supabase = createClient();
+
+    // Calculate actual days remaining from deadline
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysRemaining = Math.floor((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    console.log('=== CREATING LEGAL ASSISTANCE REMINDERS ===');
+    console.log('Docket ID:', docketId);
+    console.log('Docket Number:', docketNumber);
+    console.log('Days Since Docketing:', daysSinceDocketing);
+    console.log('Deadline:', deadline);
+    console.log('Days Remaining (calculated):', daysRemaining);
+    console.log('Assigned Officers:', assignedOfficerIds);
+
+    // Find matching reminder config
+    const reminderConfig = LEGAL_ASSISTANCE_REMINDERS.find(r => r.day === daysSinceDocketing);
+
+    if (!reminderConfig) {
+        console.log(`No reminder configured for day ${daysSinceDocketing}`);
+        return { success: true, message: 'No reminder needed for this day' };
+    }
+
+    try {
+        // 1. Create pending emails for assigned officers only
+        const pendingEmails = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            docket_id: docketId,
+            email_type: 'assistance_reminder',
+            subject: `Case Reminder: ${docketNumber}`,
+            body: reminderConfig.emailBody(docketNumber, daysRemaining),
+            status: 'PENDING'
+        }));
+
+        if (pendingEmails.length > 0) {
+            const { error: emailError } = await supabase
+                .from('pending_emails')
+                .insert(pendingEmails);
+
+            if (emailError) {
+                console.error('Error creating reminder emails:', emailError);
+            } else {
+                console.log(`Created ${pendingEmails.length} pending emails for officers`);
+            }
+        }
+
+        // 2. Create notifications for assigned officers
+        const officerNotifications = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            title: 'Case Reminder',
+            message: reminderConfig.notificationMessage(docketNumber, daysRemaining),
+            notification_type: 'reminder',
+            docket_id: docketId,
+            is_read: false
+        }));
+
+        if (officerNotifications.length > 0) {
+            const { error: officerNotifError } = await supabase
+                .from('notifications')
+                .insert(officerNotifications);
+
+            if (officerNotifError) {
+                console.error('Error creating officer notifications:', officerNotifError);
+            } else {
+                console.log(`Created ${officerNotifications.length} notifications for officers`);
+            }
+        }
+
+        // 3. Get non-admin roles for notifications
+        const nonAdminRoles = ['regional_director', 'investigation_chief', 'legal_chief', 'records_officer'];
+
+        const { data: nonAdminUsers, error: usersError } = await supabase
+            .from('users')
+            .select('id')
+            .in('role', nonAdminRoles)
+            .eq('status', 'ACTIVE');
+
+        if (usersError) {
+            console.error('Error fetching non-admin users:', usersError);
+        }
+
+        // 4. Create notifications for non-admin roles (exclude any who are also assigned officers)
+        if (nonAdminUsers && nonAdminUsers.length > 0) {
+            const officerIdSet = new Set(assignedOfficerIds);
+            const nonAdminNotifications = nonAdminUsers
+                .filter(user => !officerIdSet.has(user.id))
+                .map(user => ({
+                    user_id: user.id,
+                    title: 'Case Reminder',
+                    message: reminderConfig.notificationMessage(docketNumber, daysRemaining),
+                    notification_type: 'reminder',
+                    docket_id: docketId,
+                    is_read: false
+                }));
+
+            if (nonAdminNotifications.length > 0) {
+                const { error: nonAdminNotifError } = await supabase
+                    .from('notifications')
+                    .insert(nonAdminNotifications);
+
+                if (nonAdminNotifError) {
+                    console.error('Error creating non-admin notifications:', nonAdminNotifError);
+                } else {
+                    console.log(`Created ${nonAdminNotifications.length} notifications for non-admin users`);
+                }
+            }
+        }
+
+        console.log('=== LEGAL ASSISTANCE REMINDERS CREATED SUCCESSFULLY ===');
+        return { success: true, message: `Reminders created for day ${daysSinceDocketing}` };
+
+    } catch (error) {
+        console.error('Unexpected error creating legal assistance reminders:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+/**
+ * Gets the reminder days for Legal Assistance / OPS (for external use by cron jobs)
+ */
+export async function getLegalAssistanceReminderDays(): Promise<number[]> {
+    return LEGAL_ASSISTANCE_REMINDERS.map(r => r.day);
+}
+
+
+// ==========================================
 // CREATE OVERDUE REMINDERS (POST-DEADLINE)
 // ==========================================
 
