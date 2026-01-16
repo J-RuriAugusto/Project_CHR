@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import {
     createLegalInvestigationReminders,
-    getLegalInvestigationReminderDays
+    getLegalInvestigationReminderDays,
+    createOverdueReminders
 } from '@/lib/actions/notification-actions';
 
 // Vercel Cron Job - runs daily to check for Legal Investigation cases needing reminders
@@ -24,6 +25,22 @@ function getDaysSinceDocketing(dateReceived: string): number {
 
     // Day 0 is the date_received, so no +1
     const diffTime = today.getTime() - received.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays;
+}
+
+/**
+ * Calculate days past deadline
+ */
+function getDaysPastDeadline(deadline: string): number {
+    const deadlineDate = new Date(deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = today.getTime() - deadlineDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays;
@@ -88,19 +105,19 @@ export async function GET(request: NextRequest) {
 
         console.log(`Found ${dockets?.length || 0} pending Legal Investigation dockets`);
 
-        const results: { docketNumber: string; daysSinceDocketing: number; result: string }[] = [];
+        const results: { docketNumber: string; type: string; days: number; result: string }[] = [];
 
         // 3. Process each docket
         for (const docket of dockets || []) {
             const daysSinceDocketing = getDaysSinceDocketing(docket.date_received);
+            const daysPastDeadline = getDaysPastDeadline(docket.deadline);
+            const assignedOfficerIds = (docket.docket_staff || []).map((staff: any) => staff.user_id);
 
-            console.log(`Docket ${docket.docket_number}: ${daysSinceDocketing} days since docketing`);
+            console.log(`Docket ${docket.docket_number}: ${daysSinceDocketing} days since docketing, ${daysPastDeadline} days past deadline`);
 
-            // Check if this docket needs a reminder today
+            // A. Check for pre-deadline reminders (day 45, 50, 55, 58, 60)
             if (reminderDays.includes(daysSinceDocketing)) {
-                const assignedOfficerIds = (docket.docket_staff || []).map((staff: any) => staff.user_id);
-
-                console.log(`Sending day ${daysSinceDocketing} reminder for ${docket.docket_number}`);
+                console.log(`Sending day ${daysSinceDocketing} pre-deadline reminder for ${docket.docket_number}`);
 
                 const result = await createLegalInvestigationReminders(
                     docket.id,
@@ -112,7 +129,27 @@ export async function GET(request: NextRequest) {
 
                 results.push({
                     docketNumber: docket.docket_number,
-                    daysSinceDocketing,
+                    type: 'pre-deadline',
+                    days: daysSinceDocketing,
+                    result: result.success ? 'success' : (result.error || 'failed')
+                });
+            }
+
+            // B. Check for post-deadline overdue reminders (every 30 days: 30, 60, 90, 120...)
+            if (daysPastDeadline > 0 && daysPastDeadline % 30 === 0) {
+                console.log(`Sending ${daysPastDeadline}-day overdue reminder for ${docket.docket_number}`);
+
+                const result = await createOverdueReminders(
+                    docket.id,
+                    docket.docket_number,
+                    daysPastDeadline,
+                    assignedOfficerIds
+                );
+
+                results.push({
+                    docketNumber: docket.docket_number,
+                    type: 'overdue',
+                    days: daysPastDeadline,
                     result: result.success ? 'success' : (result.error || 'failed')
                 });
             }

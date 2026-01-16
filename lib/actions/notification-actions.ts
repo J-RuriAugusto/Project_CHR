@@ -612,3 +612,131 @@ export async function createLegalInvestigationReminders(
 export async function getLegalInvestigationReminderDays(): Promise<number[]> {
     return LEGAL_INVESTIGATION_REMINDERS.map(r => r.day);
 }
+
+// ==========================================
+// CREATE OVERDUE REMINDERS (POST-DEADLINE)
+// ==========================================
+
+/**
+ * Creates overdue reminder emails and notifications for cases past deadline.
+ * Sent every 30 days after deadline (30, 60, 90, 120... days past due).
+ * 
+ * - Emails go to assigned officers only
+ * - Notifications go to assigned officers + non-admin roles (excluding admin and officer roles)
+ * - Uses 'deadline' notification type
+ */
+export async function createOverdueReminders(
+    docketId: string,
+    docketNumber: string,
+    daysPastDeadline: number,
+    assignedOfficerIds: string[]
+): Promise<NotificationResult> {
+    const supabase = createClient();
+
+    console.log('=== CREATING OVERDUE REMINDERS ===');
+    console.log('Docket ID:', docketId);
+    console.log('Docket Number:', docketNumber);
+    console.log('Days Past Deadline:', daysPastDeadline);
+    console.log('Assigned Officers:', assignedOfficerIds);
+
+    try {
+        // 1. Create pending emails for assigned officers only
+        const emailBody = 'This case remains pending. This is a reminder for you to close and terminate this investigation at the soonest possible time.';
+
+        const pendingEmails = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            docket_id: docketId,
+            email_type: 'overdue_reminder',
+            subject: `Case Overdue Reminder: ${docketNumber}`,
+            body: emailBody,
+            status: 'PENDING'
+        }));
+
+        if (pendingEmails.length > 0) {
+            const { error: emailError } = await supabase
+                .from('pending_emails')
+                .insert(pendingEmails);
+
+            if (emailError) {
+                console.error('Error creating overdue emails:', emailError);
+            } else {
+                console.log(`Created ${pendingEmails.length} overdue emails for officers`);
+            }
+        }
+
+        // 2. Create notification message
+        const notificationMessage = `The case ${docketNumber} remains pending. It's been ${daysPastDeadline} days since deadline. Complete this as soon as possible.`;
+
+        // 3. Create notifications for assigned officers
+        const officerNotifications = assignedOfficerIds.map(officerId => ({
+            user_id: officerId,
+            title: 'Case Overdue',
+            message: notificationMessage,
+            notification_type: 'deadline',
+            docket_id: docketId,
+            is_read: false
+        }));
+
+        if (officerNotifications.length > 0) {
+            const { error: officerNotifError } = await supabase
+                .from('notifications')
+                .insert(officerNotifications);
+
+            if (officerNotifError) {
+                console.error('Error creating officer overdue notifications:', officerNotifError);
+            } else {
+                console.log(`Created ${officerNotifications.length} overdue notifications for officers`);
+            }
+        }
+
+        // 4. Get non-admin roles for notifications
+        const nonAdminRoles = ['regional_director', 'investigation_chief', 'legal_chief', 'records_officer'];
+
+        const { data: nonAdminUsers, error: usersError } = await supabase
+            .from('users')
+            .select('id')
+            .in('role', nonAdminRoles)
+            .eq('status', 'ACTIVE');
+
+        if (usersError) {
+            console.error('Error fetching non-admin users:', usersError);
+        }
+
+        // 5. Create notifications for non-admin roles (exclude already-notified officers)
+        if (nonAdminUsers && nonAdminUsers.length > 0) {
+            const officerIdSet = new Set(assignedOfficerIds);
+            const nonAdminNotifications = nonAdminUsers
+                .filter(user => !officerIdSet.has(user.id))
+                .map(user => ({
+                    user_id: user.id,
+                    title: 'Case Overdue',
+                    message: notificationMessage,
+                    notification_type: 'deadline',
+                    docket_id: docketId,
+                    is_read: false
+                }));
+
+            if (nonAdminNotifications.length > 0) {
+                const { error: nonAdminNotifError } = await supabase
+                    .from('notifications')
+                    .insert(nonAdminNotifications);
+
+                if (nonAdminNotifError) {
+                    console.error('Error creating non-admin overdue notifications:', nonAdminNotifError);
+                } else {
+                    console.log(`Created ${nonAdminNotifications.length} overdue notifications for non-admin users`);
+                }
+            }
+        }
+
+        console.log('=== OVERDUE REMINDERS CREATED SUCCESSFULLY ===');
+        return { success: true, message: `Overdue reminders created for ${daysPastDeadline} days past deadline` };
+
+    } catch (error) {
+        console.error('Unexpected error creating overdue reminders:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
