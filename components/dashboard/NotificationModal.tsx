@@ -14,10 +14,13 @@ interface NotificationModalProps {
     onDocketClick?: (docketId: string) => void;
 }
 
+const NOTIFICATIONS_PER_PAGE = 30;
+
 export default function NotificationModal({ isOpen, onClose, onDocketClick }: NotificationModalProps) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isMarkingAll, setIsMarkingAll] = useState(false);
+    const [visibleCount, setVisibleCount] = useState(NOTIFICATIONS_PER_PAGE);
     // State for "Case Deleted" warning modal
     const [showDeletedCaseModal, setShowDeletedCaseModal] = useState(false);
 
@@ -25,6 +28,7 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
     useEffect(() => {
         if (isOpen) {
             fetchNotifications();
+            setVisibleCount(NOTIFICATIONS_PER_PAGE); // Reset on open
         }
     }, [isOpen]);
 
@@ -86,22 +90,28 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
         }
     };
 
+    const handleSeeOlder = () => {
+        setVisibleCount(prev => prev + NOTIFICATIONS_PER_PAGE);
+    };
+
     const getIconPath = (type: string) => {
         switch (type) {
-            case 'complete':
-                return '/icon12.png';
-            case 'assigned':
-                return '/icon14.png';
-            case 'overdue':
-                return '/icon19.png';
-            case 'deadline':
-                return '/icon13.png';
             case 'new_case':
-                return '/icon14.png'; // Use assignment icon for new cases
+                return '/icon14.png'; // Blue document icon - new case created
+            case 'assigned':
+                return '/icon14.png'; // Blue document icon - assigned to case
+            case 'complete':
+                return '/icon12.png'; // Green checkmark - case completed
+            case 'deadline':
+                return '/icon13.png'; // Yellow clock - deadline approaching
+            case 'reminder':
+                return '/icon13.png'; // Yellow clock - reminder
+            case 'overdue':
+                return '/icon19.png'; // Red alert icon - overdue/urgent
             case 'deleted':
-                return '/icon19.png'; // Use alert/warning icon for deleted cases
+                return '/icon19.png'; // Red alert icon - case deleted
             default:
-                return '/icon14.png';
+                return '/icon14.png'; // Default to document icon
         }
     };
 
@@ -121,8 +131,12 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    const newNotifications = notifications.filter(n => !n.is_read);
-    const earlierNotifications = notifications.filter(n => n.is_read);
+    // Get visible notifications (paginated)
+    const visibleNotifications = notifications.slice(0, visibleCount);
+    const hasMoreNotifications = notifications.length > visibleCount;
+
+    const newNotifications = visibleNotifications.filter(n => !n.is_read);
+    const earlierNotifications = visibleNotifications.filter(n => n.is_read);
 
     if (!isOpen) return null;
 
@@ -212,6 +226,19 @@ export default function NotificationModal({ isOpen, onClose, onDocketClick }: No
                                             <div className="w-3 h-3 flex-shrink-0 ml-2"></div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* See Older Button */}
+                            {hasMoreNotifications && (
+                                <div className="px-6 py-4 text-center">
+                                    <button
+                                        onClick={handleSeeOlder}
+                                        className="text-base font-medium hover:underline"
+                                        style={{ color: '#1B61E3' }}
+                                    >
+                                        See Older
+                                    </button>
                                 </div>
                             )}
                         </>
