@@ -81,6 +81,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
     const [rightsViolated, setRightsViolated] = useState<string[]>(['']);
     const [status, setStatus] = useState<string>('Pending');
     const isEditable = status === 'Pending' && currentUserRole !== 'officer';
+    const isCompletedForOfficer = status === 'Completed' && currentUserRole === 'officer';
 
 
     // Updated state for Victims and Respondents - both support multiple sectors
@@ -1032,11 +1033,12 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                             <select
                                                 value={status}
                                                 onChange={(e) => setStatus(e.target.value)}
-                                                className="bg-white text-midnightNavy rounded-full px-4 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                disabled={isCompletedForOfficer}
+                                                className={`bg-white text-midnightNavy rounded-full px-4 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${isCompletedForOfficer ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <option value="Pending">Pending</option>
                                                 <option value="For Review">For Review</option>
-                                                {currentUserRole !== 'officer' && <option value="Completed">Completed</option>}
+                                                {(currentUserRole !== 'officer' || status === 'Completed') && <option value="Completed">Completed</option>}
                                             </select>
                                         </div>
                                         <button
@@ -1568,8 +1570,8 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                                     <div className="flex justify-end items-center -mt-10 gap-2">
                                         <button
                                             onClick={handleSaveChanges}
-                                            disabled={isSaving}
-                                            className="bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 disabled:opacity-70"
+                                            disabled={isSaving || isCompletedForOfficer}
+                                            className={`bg-royalAzure text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 disabled:opacity-70 ${isCompletedForOfficer ? 'cursor-not-allowed' : ''}`}
                                         >
                                             {isSaving ? (
                                                 <>
