@@ -35,15 +35,26 @@ export default function ResetPasswordForm({ code }: ResetPasswordFormProps) {
         setIsLoading(true);
 
         try {
-            // If there's a code, try to exchange it first
-            if (code) {
-                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-                if (exchangeError) {
-                    setError('Invalid or expired reset link. Please request a new one.');
+            // First, check if user already has a session (set by /auth/confirm)
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                // No session - try to exchange code if provided
+                if (code) {
+                    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                    if (exchangeError) {
+                        setError('Invalid or expired reset link. Please request a new one.');
+                        setIsLoading(false);
+                        return;
+                    }
+                } else {
+                    // No session and no code - can't reset password
+                    setError('Please use the password reset link from your email.');
                     setIsLoading(false);
                     return;
                 }
             }
+            // If session exists, user came from /auth/confirm - skip code exchange
 
             // Update the password
             const { error: updateError } = await supabase.auth.updateUser({
