@@ -12,7 +12,7 @@ import UrgentCases from '@/components/dashboard/UrgentCases';
 import { getAllDocketLookups } from '@/lib/actions/docket-lookups';
 import { getCaseTypeBreakdown, getCaseAgeingOverview } from '@/lib/actions/analytics';
 import { CaseTypeChart, CaseAgeingChart } from '@/components/dashboard/Analytics';
-import GenerateReportButton from '@/components/dashboard/GenerateReportButton';
+
 
 export default async function OfficerDashboard() {
     const supabase = await createClient();
@@ -184,7 +184,7 @@ export default async function OfficerDashboard() {
                                     <h2 className="text-base text-midnightNavy font-semibold">
                                         Case Analytics
                                     </h2>
-                                    <GenerateReportButton />
+
                                 </div>
 
                                 {/* Charts container */}
