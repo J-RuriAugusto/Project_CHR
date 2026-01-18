@@ -1,90 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
-import { ResetButton } from './ResetButton';
-import { PasswordInput } from '@/components/PasswordInput';
+import ResetPasswordForm from './ResetPasswordForm';
 
 export default async function ResetPassword({
   searchParams,
 }: {
   searchParams: { message: string; code: string };
 }) {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Allow logged-in users to access this page if they have a code,
-  // or if they are just doing a manual reset.
-  // We do NOT redirect if session exists, because they might have clicked the link while logged in.
-
-  const resetPassword = async (formData: FormData) => {
-    'use server';
-
-    const password = formData.get('password') as string;
-    const confirmPassword = formData.get('confirmPassword') as string;
-    const supabase = createClient();
-
-    if (password !== confirmPassword) {
-      return redirect(
-        `/reset-password?message=Passwords do not match&code=${searchParams.code || ''}`
-      );
-    }
-
-    // First, check if the user already has a session (e.g., came from /auth/confirm)
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-    if (currentSession) {
-      // User already has a session, update password directly
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
-
-      if (updateError) {
-        console.error('Update Error:', updateError);
-        return redirect(
-          `/reset-password?message=Unable to reset Password. Try again!`
-        );
-      }
-
-      // Success! Redirect to home/dashboard
-      redirect('/');
-    }
-
-    // No session - try to exchange code if provided
-    const code = searchParams.code;
-
-    if (code) {
-      // If we have a code, we try to exchange it for a session first
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (exchangeError) {
-        console.error("Exchange Error:", exchangeError);
-        return redirect(`/reset-password?message=Invalid or expired reset link. Please request a new one.`);
-      }
-
-      // Now update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
-
-      if (updateError) {
-        console.error('Update Error:', updateError);
-        return redirect(
-          `/reset-password?message=Unable to reset Password. Try again!`
-        );
-      }
-
-      // Success! Redirect to home/dashboard
-      redirect('/');
-    }
-
-    // No session and no code - can't reset password
-    return redirect('/?message=Please use the password reset link from your email.');
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Navy Header */}
@@ -130,53 +52,10 @@ export default async function ResetPassword({
             Reset Your Password
           </h1>
 
-          <form action={resetPassword} className="w-full space-y-3">
-            {/* New Password */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-semibold text-[#737373] mb-2 ml-1 font-sans"
-              >
-                New Password
-              </label>
-              <PasswordInput
-                id="password"
-                name="password"
-                placeholder="Input your new password..."
-                required
-              />
-            </div>
-
-            {/* Confirm New Password */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-semibold text-[#737373] mb-2 ml-1 font-sans"
-              >
-                Confirm New Password
-              </label>
-              <PasswordInput
-                id="confirmPassword"
-                name="confirmPassword"
-                placeholder="Confirm your new Password..."
-                required
-              />
-            </div>
-
-            <ResetButton />
-
-            {/* Error/Success Message */}
-            {searchParams?.message && (
-              <div className={`mt-4 p-3 rounded-md text-xs text-center ${searchParams.message.includes('success')
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-700'
-                }`}>
-                {searchParams.message}
-              </div>
-            )}
-          </form>
+          <ResetPasswordForm code={searchParams.code} />
         </div>
       </main>
     </div>
   );
 }
+
