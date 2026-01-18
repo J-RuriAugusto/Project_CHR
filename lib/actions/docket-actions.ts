@@ -118,15 +118,14 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             return { success: false, error: 'Invalid date format' };
         }
 
-        // 1. Update dockets table
+        // 1. Update dockets table (removed violation_category from payload)
         const updatePayload: any = {
             docket_number: data.docketNumber,
             date_received: dateReceivedDB,
             deadline: deadlineDB,
             type_of_request_id: data.typeOfRequestId,
-            violation_category: data.violationCategory,
             mode_of_request_id: data.modeOfRequestId,
-            // staff_in_charge_id removed
+            // violation_category now in junction table
         };
 
         if (status) {
@@ -163,7 +162,38 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             return { success: false, error: docketError.message };
         }
 
-        // 2. Update Rights (Delete all and re-insert)
+        // 2. Update Violation Categories (Delete all and re-insert)
+        const { error: deleteCategoriesError } = await supabase
+            .from('docket_violation_categories')
+            .delete()
+            .eq('docket_id', docketId);
+
+        if (deleteCategoriesError) {
+            console.error('Error deleting existing categories:', deleteCategoriesError);
+            return { success: false, error: 'Failed to update categories: ' + deleteCategoriesError.message };
+        }
+
+        if (data.violationCategories && data.violationCategories.length > 0) {
+            const categoriesToInsert = data.violationCategories
+                .filter(c => c.trim() !== '')
+                .map(categoryName => ({
+                    docket_id: docketId,
+                    category_name: categoryName.trim()
+                }));
+
+            if (categoriesToInsert.length > 0) {
+                const { error: insertCategoriesError } = await supabase
+                    .from('docket_violation_categories')
+                    .insert(categoriesToInsert);
+
+                if (insertCategoriesError) {
+                    console.error('Error inserting new categories:', insertCategoriesError);
+                    return { success: false, error: 'Failed to save new categories' };
+                }
+            }
+        }
+
+        // 3. Update Rights (Delete all and re-insert)
         const { error: deleteRightsError } = await supabase
             .from('docket_rights')
             .delete()

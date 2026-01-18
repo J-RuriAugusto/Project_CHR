@@ -405,7 +405,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             dateReceived,
             deadline,
             typeOfRequest,
-            violationCategory: categories,
+            violationCategories: categories,
             complainants,
 
             modeOfRequest,
@@ -429,7 +429,7 @@ export default function DocketNewCaseModal({ isOpen, onClose, users, lookups }: 
             dateReceived,
             deadline,
             typeOfRequest,
-            violationCategory: categories,
+            violationCategories: categories,
             complainants,
             modeOfRequest,
             rightsViolated: rights,

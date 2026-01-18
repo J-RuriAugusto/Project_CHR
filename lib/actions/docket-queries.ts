@@ -14,7 +14,7 @@ export interface DocketListItem {
     deadline: Date;
     dateReceived: string;
     // New search fields
-    violationCategory: string;
+    violationCategories: string[];
     requestMode: string;
     rights: string[];
     complainants: string[];
@@ -37,7 +37,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             deadline,
             updated_at,
             status,
-            violation_category,
+            docket_violation_categories (category_name),
             type_of_request_id,
             request_types!type_of_request_id (name),
             mode_of_request_id,
@@ -68,7 +68,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
                 deadline,
                 updated_at,
                 status,
-                violation_category,
+                docket_violation_categories (category_name),
                 type_of_request_id,
                 request_types!type_of_request_id (name),
                 mode_of_request_id,
@@ -168,7 +168,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             deadline: deadlineDate,
             dateReceived: docket.date_received,
             // New fields
-            violationCategory: docket.violation_category || '',
+            violationCategories: docket.docket_violation_categories?.map((c: any) => c.category_name) || [],
             requestMode: docket.request_modes?.name || '',
             rights,
             complainants,
@@ -233,7 +233,18 @@ export async function getDocketDetails(id: string) {
         return null;
     }
 
-    // 3. Fetch parties (victims and respondents) with their sectors
+    // 3. Fetch violation categories from junction table
+    const { data: categories, error: categoriesError } = await supabase
+        .from('docket_violation_categories')
+        .select('category_name')
+        .eq('docket_id', id);
+
+    if (categoriesError) {
+        console.error('Error fetching categories:', categoriesError);
+        // Don't fail completely, just use empty array
+    }
+
+    // 4. Fetch parties (victims and respondents) with their sectors
     const { data: parties, error: partiesError } = await supabase
         .from('docket_parties')
         .select(`
@@ -251,7 +262,7 @@ export async function getDocketDetails(id: string) {
         return null;
     }
 
-    // 4. Fetch complainants
+    // 5. Fetch complainants
     const { data: complainantsData, error: complainantsError } = await supabase
         .from('docket_complainants')
         .select('name, contact_number')
@@ -289,12 +300,15 @@ export async function getDocketDetails(id: string) {
         email: ds.users.email
     }));
 
+    // Process categories (now from junction table)
+    const violationCategories = categories?.map((c: any) => c.category_name) || [];
+
     return {
         docketNumber: docket.docket_number,
         dateReceived: new Date(docket.date_received).toLocaleDateString('en-US'),
         deadline: new Date(docket.deadline).toLocaleDateString('en-US'),
         typeOfRequestId: docket.type_of_request_id,
-        violationCategory: docket.violation_category,
+        violationCategories, // Changed from violationCategory string to array
         modeOfRequestId: docket.mode_of_request_id,
         rightsViolated: rights.map((r: any) => r.right_name),
         victims,
@@ -305,3 +319,4 @@ export async function getDocketDetails(id: string) {
         complainants: complainants.length > 0 ? complainants : [{ name: '', contactNumber: '' }]
     };
 }
+

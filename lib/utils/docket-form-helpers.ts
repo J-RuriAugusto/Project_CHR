@@ -12,7 +12,7 @@ interface DocketFormData {
     dateReceived: string;
     deadline: string;
     typeOfRequest: number | '';
-    violationCategory: string[];
+    violationCategories: string[];
     modeOfRequest: number | '';
     rightsViolated: string[];
     victims: { name: string; sectors: string[] }[];
@@ -42,7 +42,7 @@ export async function validateDocketForm(formData: DocketFormData, isMotuProprio
     }
 
     // Category
-    const validCategories = formData.violationCategory.filter(c => c.trim() !== '');
+    const validCategories = formData.violationCategories.filter(c => c.trim() !== '');
     if (validCategories.length === 0) {
         errors.category = 'At least one Category is required';
     } else {
@@ -148,8 +148,8 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
     const respondentsWithNames = formData.respondents.filter(r => r.name.trim() !== '');
 
     // Prepare submission data
-    // Join categories with comma
-    const violationCategory = formData.violationCategory.filter(c => c.trim() !== '').join(', ');
+    // Filter categories (now as array, no longer joining)
+    const violationCategories = formData.violationCategories.filter((c: string) => c.trim() !== '');
     const rightsViolated = formData.rightsViolated.filter(r => r.trim() !== '');
 
     const submissionData: DocketSubmissionData = {
@@ -157,7 +157,7 @@ export async function submitDocketForm(formData: DocketFormData): Promise<{ succ
         dateReceived: formData.dateReceived,
         deadline: formData.deadline,
         typeOfRequestId: formData.typeOfRequest as number,
-        violationCategory: violationCategory,
+        violationCategories: violationCategories,
         modeOfRequestId: formData.modeOfRequest as number,
         rightsViolated: rightsViolated,
         victims: victimsWithNames.map(v => ({ name: v.name, sectorNames: v.sectors })),

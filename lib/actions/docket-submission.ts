@@ -9,7 +9,7 @@ export interface DocketSubmissionData {
     dateReceived: string;
     deadline: string;
     typeOfRequestId: number;
-    violationCategory: string;
+    violationCategories: string[]; // Changed from single string to array
     modeOfRequestId: number;
     rightsViolated: string[];
     victims: { name: string; sectorNames: string[] }[];
@@ -135,10 +135,10 @@ export async function submitDocket(
             p_deadline: deadlineDB,
             p_type_of_request_id: data.typeOfRequestId,
             p_mode_of_request_id: data.modeOfRequestId,
-            p_violation_category: data.violationCategory,
+            p_violation_category: '', // Legacy param, now using junction table
             p_created_by_user_id: publicUserId,
-            // p_rights is handled by RPC
-            p_rights: data.rightsViolated
+            p_rights: data.rightsViolated,
+            p_categories: data.violationCategories // NEW: array of categories
         });
 
         if (rpcError) {

@@ -222,9 +222,9 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 setUpdatedAt(details.updatedAt);
                 setTypeOfRequest(details.typeOfRequestId);
 
-                // Handle categories (split by comma if it's a string, or use as is)
-                if (details.violationCategory) {
-                    setCategories(details.violationCategory.split(',').map((c: string) => c.trim()));
+                // Handle categories (now comes as array from API)
+                if (details.violationCategories && details.violationCategories.length > 0) {
+                    setCategories(details.violationCategories);
                 } else {
                     setCategories(['']);
                 }
@@ -259,7 +259,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                     dateReceived: details.dateReceived,
                     deadline: details.deadline,
                     typeOfRequest: details.typeOfRequestId,
-                    categories: details.violationCategory ? details.violationCategory.split(',').map((c: string) => c.trim()) : [''],
+                    categories: details.violationCategories && details.violationCategories.length > 0 ? details.violationCategories : [''],
                     modeOfRequest: details.modeOfRequestId,
                     rightsViolated: details.rightsViolated && details.rightsViolated.length > 0 ? details.rightsViolated : [''],
                     victims: details.victims.length > 0 ? details.victims : [{ name: '', sectors: [] }],
@@ -689,7 +689,7 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
                 dateReceived,
                 deadline,
                 typeOfRequestId: Number(typeOfRequest),
-                violationCategory: categories.join(','),
+                violationCategories: categories.filter(c => c.trim() !== ''),
                 complainants: isMotuProprio ? [] : complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
                 modeOfRequestId: Number(modeOfRequest),
                 rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
