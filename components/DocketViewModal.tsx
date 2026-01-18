@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Calendar, Plus, ChevronDown, Search, XCircle } from 'lucide-react';
 import { DocketLookups } from '@/lib/actions/docket-lookups';
 import { getDocketDetails, checkDocketNumberExists } from '@/lib/actions/docket-queries';
-import { deleteDockets, updateDocket } from "@/lib/actions/docket-actions";
+import { deleteDockets, updateDocket, updateDocketStatus } from "@/lib/actions/docket-actions";
 import { DocketSubmissionData } from '@/lib/actions/docket-submission';
 
 interface DocketViewModalProps {
@@ -684,22 +684,30 @@ export default function DocketViewModal({ isOpen, onClose, docketId, users, look
 
             setIsSaving(true);
 
-            const submissionData: DocketSubmissionData = {
-                docketNumber,
-                dateReceived,
-                deadline,
-                typeOfRequestId: Number(typeOfRequest),
-                violationCategories: categories.filter(c => c.trim() !== ''),
-                complainants: isMotuProprio ? [] : complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
-                modeOfRequestId: Number(modeOfRequest),
-                rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
-                victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
-                respondents: respondents.map(r => ({ name: r.name, sectorNames: r.sectors })),
-                staffInChargeIds: assignedStaff.map(s => s.userId)
-            };
-
             try {
-                const result = await updateDocket(docketId, submissionData, status.toUpperCase());
+                let result;
+
+                // Officers can only update status, so use the simpler updateDocketStatus function
+                if (currentUserRole === 'officer') {
+                    result = await updateDocketStatus([docketId], status.toUpperCase());
+                } else {
+                    // Other roles use the full updateDocket function
+                    const submissionData: DocketSubmissionData = {
+                        docketNumber,
+                        dateReceived,
+                        deadline,
+                        typeOfRequestId: Number(typeOfRequest),
+                        violationCategories: categories.filter(c => c.trim() !== ''),
+                        complainants: isMotuProprio ? [] : complainants.map(c => ({ name: c.name, contactNumber: c.contactNumber })),
+                        modeOfRequestId: Number(modeOfRequest),
+                        rightsViolated: rightsViolated.filter(r => r.trim() !== ''),
+                        victims: victims.map(v => ({ name: v.name, sectorNames: v.sectors })),
+                        respondents: respondents.map(r => ({ name: r.name, sectorNames: r.sectors })),
+                        staffInChargeIds: assignedStaff.map(s => s.userId)
+                    };
+
+                    result = await updateDocket(docketId, submissionData, status.toUpperCase());
+                }
 
                 if (result.success) {
                     setShowSaveSuccess(true);
