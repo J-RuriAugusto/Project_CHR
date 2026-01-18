@@ -1,21 +1,22 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Validate environment variables at module load time
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing env vars:', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
-}
-
-const supabase = createClient(
-  supabaseUrl || '',
-  supabaseKey || ''
-);
-
 export async function GET(req: Request) {
   try {
+    // Create Supabase client inside the handler to avoid build-time errors
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing env vars:', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { searchParams } = new URL(req.url);
 
     const startYear = Number(searchParams.get('startYear'));
