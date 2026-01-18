@@ -20,11 +20,24 @@ export default function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [displayMessage, setDisplayMessage] = useState(message);
   const supabase = createClient();
+
+  // Clear URL params on mount to prevent stale messages on refresh
+  useEffect(() => {
+    // Check if there's a message in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('message')) {
+      // Replace the URL without the message param to clean up on refresh
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
 
   useEffect(() => {
     if (message) {
       setIsLoading(false);
+      setDisplayMessage(message);
     }
   }, [message]);
 
@@ -182,9 +195,9 @@ export default function LoginForm({
       </button>
 
       {/* Error message display */}
-      {message && (
+      {displayMessage && (
         <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-          <p className="text-center text-sm">{message}</p>
+          <p className="text-center text-sm">{displayMessage}</p>
         </div>
       )}
     </div>

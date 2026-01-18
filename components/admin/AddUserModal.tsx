@@ -17,6 +17,11 @@ interface AddUserModalProps {
   user?: User | null;
 }
 
+interface SuccessModalState {
+  isOpen: boolean;
+  message: string;
+}
+
 export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     email: '',
@@ -31,6 +36,10 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
   const [inviteStatus, setInviteStatus] = useState<{ checked: boolean; isConfirmed: boolean }>({
     checked: false,
     isConfirmed: false
+  });
+  const [successModal, setSuccessModal] = useState<SuccessModalState>({
+    isOpen: false,
+    message: ''
   });
 
   // Update form data when user prop changes
@@ -99,7 +108,10 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
         throw new Error(data.error || 'Failed to resend invitation');
       }
 
-      alert(`Invitation resent to ${user.email}`);
+      setSuccessModal({
+        isOpen: true,
+        message: `Invitation email sent to ${user.email}`
+      });
     } catch (err: any) {
       setError(err.message || 'Failed to resend invitation');
     } finally {
@@ -167,10 +179,15 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           role: 'officer',
           status: 'ACTIVE'
         });
-        alert(`Invitation email sent to ${formData.email}`);
+        setSuccessModal({
+          isOpen: true,
+          message: `Invitation email sent to ${formData.email}`
+        });
       }
-      onClose();
-      window.location.reload();
+      if (user) {
+        onClose();
+        window.location.reload();
+      }
     } catch (error: any) {
       setError(error.message || `Failed to ${user ? 'update' : 'create'} user`);
     } finally {
@@ -334,6 +351,32 @@ export default function AddUserModal({ isOpen, onClose, user }: AddUserModalProp
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {successModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-gray-600 mb-6">
+              {successModal.message}
+            </p>
+            <button
+              onClick={() => {
+                setSuccessModal({ isOpen: false, message: '' });
+                onClose();
+                window.location.reload();
+              }}
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-8 rounded-lg transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
