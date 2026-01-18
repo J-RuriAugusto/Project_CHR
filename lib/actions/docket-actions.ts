@@ -164,7 +164,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
 
         // 2. Update Violation Categories (Delete all and re-insert)
         const { error: deleteCategoriesError } = await supabase
-            .from('docket_violation_categories')
+            .from('docket_violations')
             .delete()
             .eq('docket_id', docketId);
 
@@ -183,7 +183,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
 
             if (categoriesToInsert.length > 0) {
                 const { error: insertCategoriesError } = await supabase
-                    .from('docket_violation_categories')
+                    .from('docket_violations')
                     .insert(categoriesToInsert);
 
                 if (insertCategoriesError) {
@@ -204,11 +204,17 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
             return { success: false, error: 'Failed to update rights: ' + deleteRightsError.message };
         }
 
-        if (data.rightsViolated.length > 0) {
-            const rightsToInsert = data.rightsViolated.map(rightName => ({
+        // Filter out empty and duplicate rights
+        const filteredRights = data.rightsViolated.filter(r => r.trim() !== '');
+        const uniqueRights = filteredRights.filter((r, i, arr) => arr.indexOf(r) === i);
+
+        if (uniqueRights.length > 0) {
+            const rightsToInsert = uniqueRights.map(rightName => ({
                 docket_id: docketId,
-                right_name: rightName
+                right_name: rightName.trim()
             }));
+
+            console.log('Inserting rights:', rightsToInsert);
 
             const { error: insertRightsError } = await supabase
                 .from('docket_rights')
@@ -216,7 +222,7 @@ export async function updateDocket(docketId: string, data: DocketSubmissionData,
 
             if (insertRightsError) {
                 console.error('Error inserting new rights:', insertRightsError);
-                return { success: false, error: 'Failed to save new rights' };
+                return { success: false, error: 'Failed to save new rights: ' + insertRightsError.message };
             }
         }
 

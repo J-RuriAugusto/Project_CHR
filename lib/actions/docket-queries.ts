@@ -37,7 +37,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             deadline,
             updated_at,
             status,
-            docket_violation_categories (category_name),
+            docket_violations (category_name),
             type_of_request_id,
             request_types!type_of_request_id (name),
             mode_of_request_id,
@@ -68,7 +68,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
                 deadline,
                 updated_at,
                 status,
-                docket_violation_categories (category_name),
+                docket_violations (category_name),
                 type_of_request_id,
                 request_types!type_of_request_id (name),
                 mode_of_request_id,
@@ -168,7 +168,7 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
             deadline: deadlineDate,
             dateReceived: docket.date_received,
             // New fields
-            violationCategories: docket.docket_violation_categories?.map((c: any) => c.category_name) || [],
+            violationCategories: docket.docket_violations?.map((c: any) => c.category_name) || [],
             requestMode: docket.request_modes?.name || '',
             rights,
             complainants,
@@ -235,7 +235,7 @@ export async function getDocketDetails(id: string) {
 
     // 3. Fetch violation categories from junction table
     const { data: categories, error: categoriesError } = await supabase
-        .from('docket_violation_categories')
+        .from('docket_violations')
         .select('category_name')
         .eq('docket_id', id);
 
