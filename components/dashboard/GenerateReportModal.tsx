@@ -166,18 +166,37 @@ async function generatePDFReport(filters: {
   doc.text(splitSummaryIntro, 20, y);
   y += (splitSummaryIntro.length * 5) + 6;
 
-  doc.setFontSize(10);
-  [
+  const summaryPoints = [
     `Total Cases Documented: ${analytics.totalCases}`,
     `Most Prevalent Violation Category: ${analytics.mostCommonCategory}`,
     `Pending Cases: ${analytics.pendingCases}`
-  ].forEach(line => {
-    pageBreak(6);
-    doc.text(`• ${line}`, 25, y);
-    y += 6;
+  ];
+
+  // Define max width for bullets (Page width - Margin Left - Margin Right)
+  // 25 is the x-position, so we subtract that plus a right margin of 20
+  const bulletMaxWidth = pageWidth - 45;
+
+  summaryPoints.forEach(line => {
+    const fullText = `• ${line}`;
+
+    // Split the text if it's too long
+    const splitText = doc.splitTextToSize(fullText, bulletMaxWidth);
+
+    // Calculate height needed for this specific bullet point (lines * line height)
+    const lineHeight = 6;
+    const blockHeight = splitText.length * lineHeight;
+
+    // Check if we need a new page before printing
+    pageBreak(blockHeight);
+
+    // Print the wrapped text
+    doc.text(splitText, 25, y);
+
+    // Increase Y by the height of the block
+    y += blockHeight;
   });
 
-  y += 10;
+  y += 4;
 
   /* ===== BY CATEGORY ===== */
   pageBreak(50);
