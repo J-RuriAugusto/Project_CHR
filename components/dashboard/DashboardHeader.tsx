@@ -15,6 +15,14 @@ interface DashboardHeaderProps {
     onDocketClick?: (docketId: string) => void;
 }
 
+// Format role from backend (e.g., 'records_officer' -> 'Records Officer')
+function formatRole(role: string): string {
+    return role
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
 export default function DashboardHeader({ userData, onDocketClick }: DashboardHeaderProps) {
     const router = useRouter();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -187,7 +195,7 @@ export default function DashboardHeader({ userData, onDocketClick }: DashboardHe
                         <p className="font-bold text-midnightNavy">
                             {userData.first_name} {userData.last_name}
                         </p>
-                        <p className="text-sm text-midnightNavy">{userData.role}</p>
+                        <p className="text-sm text-midnightNavy">{formatRole(userData.role)}</p>
                     </div>
 
                     <img
