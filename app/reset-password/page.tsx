@@ -20,23 +20,6 @@ export default async function ResetPassword({
   // or if they are just doing a manual reset.
   // We do NOT redirect if session exists, because they might have clicked the link while logged in.
 
-  // If there is a code in URL, we need to defer the exchange to the client or server action?
-  // Actually, resetPasswordForEmail link contains a `code`.
-  // Supabase Auth usually handles the code exchange in a callback route OR we must handle it.
-  // The standard flow is: link -> /auth/callback?code=... -> exchange -> redirect to /reset-password
-  // IF the link points directly to /reset-password?code=..., then we must handle it.
-
-  // Checking typical valid logic:
-  // If this page is reached with a valid session, let them reset.
-  // If not valid session but has code, we might need to exchange it first?
-  // NextJS Supabase helpers usually suggest an auth callback route.
-
-  // Current Issue:
-  // implementation had: if (session) return redirect('/');
-  // This explicitly kicks them out if they are logged in.
-
-  // FIX: Just remove that block.
-
   const resetPassword = async (formData: FormData) => {
     'use server';
 
@@ -50,7 +33,27 @@ export default async function ResetPassword({
       );
     }
 
-    // Capture the code from searchParams
+    // First, check if the user already has a session (e.g., came from /auth/confirm)
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+    if (currentSession) {
+      // User already has a session, update password directly
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (updateError) {
+        console.error('Update Error:', updateError);
+        return redirect(
+          `/reset-password?message=Unable to reset Password. Try again!`
+        );
+      }
+
+      // Success! Redirect to home/dashboard
+      redirect('/');
+    }
+
+    // No session - try to exchange code if provided
     const code = searchParams.code;
 
     if (code) {
@@ -59,30 +62,27 @@ export default async function ResetPassword({
 
       if (exchangeError) {
         console.error("Exchange Error:", exchangeError);
-        return redirect(`/reset-password?message=Invalid or expired reset link.`);
+        return redirect(`/reset-password?message=Invalid or expired reset link. Please request a new one.`);
       }
-    } else {
-      // If NO CODE, we must ensure the user is already logged in
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession) {
-        return redirect('/');
+
+      // Now update the password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (updateError) {
+        console.error('Update Error:', updateError);
+        return redirect(
+          `/reset-password?message=Unable to reset Password. Try again!`
+        );
       }
+
+      // Success! Redirect to home/dashboard
+      redirect('/');
     }
 
-    // Now update the password
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
-
-    if (updateError) {
-      console.error('Update Error:', updateError);
-      return redirect(
-        `/reset-password?message=Unable to reset Password. Try again!&code=${code || ''}`
-      );
-    }
-
-    // Success! Redirect to home/dashboard logic.
-    redirect('/');
+    // No session and no code - can't reset password
+    return redirect('/?message=Please use the password reset link from your email.');
   };
 
   return (
