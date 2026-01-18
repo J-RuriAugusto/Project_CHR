@@ -8,24 +8,12 @@ interface GenerateReportModalProps {
   onGenerate: (filters: { startYear: number; endYear: number; category: string }) => void;
 }
 
-const VIOLATION_CATEGORIES = [
-  "Arbitrary Arrest and Detention",
-  "Torture or Ill-Treatment",
-  "Extrajudicial Killing",
-  "Enforced Disappearance",
-  "Excessive Use of Force",
-  "Suppression of Freedom of Expression",
-  "Restriction on Assembly and Association",
-  "Denial of Fair Trial",
-  "Discrimination",
-  "Forced Eviction",
-  "Denial of Education",
-  "Denial of Health Services",
-  "Labor Rights Violations",
-  "Violation of Privacy",
-  "Attacks on Human Rights Defenders / Journalists",
-  "Failure to Investigate or Provide Remedy"
-];
+// Fuzzy search helper - matches if all search words appear in the text
+function fuzzyMatch(text: string, search: string): boolean {
+  const searchWords = search.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  const textLower = text.toLowerCase();
+  return searchWords.every(word => textLower.includes(word));
+}
 
 /* ===============================
   🔹 FETCH FROM API ROUTE
@@ -64,7 +52,7 @@ async function generatePDFReport(filters: {
 }) {
   // @ts-ignore
   const { jsPDF } = window.jspdf;
-  
+
   if (!jsPDF) {
     throw new Error('PDF library not loaded. Please refresh the page.');
   }
@@ -179,7 +167,7 @@ async function generatePDFReport(filters: {
       doc.text(`• ${cat}: ${count} (${percentage}%)`, 25, y);
       y += 6;
     });
-  
+
   /* ===== BY RIGHTS VIOLATED ===== */
   if (Object.keys(analytics.byRights).length > 0) {
     y += 10;
@@ -274,7 +262,7 @@ function analyzeData(cases: any[]) {
         c.rightsViolated.forEach((right: string) => {
           byRights[right] = (byRights[right] || 0) + 1;
         });
-      } 
+      }
       // If rights violated is a comma-separated string
       else if (typeof c.rightsViolate === 'string') {
         c.rightsViolate.split(',').forEach((right: string) => {
@@ -299,8 +287,8 @@ function analyzeData(cases: any[]) {
     }
   });
 
-  const mostCommonCategory = mostCommonCategories.length > 1 
-    ? mostCommonCategories.join(', ') 
+  const mostCommonCategory = mostCommonCategories.length > 1
+    ? mostCommonCategories.join(', ')
     : mostCommonCategories[0] || 'N/A';
 
   const resolved =
@@ -336,9 +324,31 @@ export default function GenerateReportModal({
   const [showDropdown, setShowDropdown] = useState(false);
   const [error, setError] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const yearOptions = Array.from({ length: 20 }, (_, i) => currentYear - i);
+
+  // Fetch categories from database when modal opens
+  useEffect(() => {
+    if (isOpen && availableCategories.length === 0) {
+      setLoadingCategories(true);
+      fetch('/api/reports/categories')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setAvailableCategories(data);
+            setSelectedCategories(data); // Auto-select all
+          }
+        })
+        .catch(err => console.error('Failed to fetch categories:', err))
+        .finally(() => setLoadingCategories(false));
+    } else if (isOpen && availableCategories.length > 0 && selectedCategories.length === 0) {
+      // Re-select all when reopening
+      setSelectedCategories([...availableCategories]);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -367,10 +377,10 @@ export default function GenerateReportModal({
   };
 
   const handleSelectAll = () => {
-    if (selectedCategories.length === VIOLATION_CATEGORIES.length) {
+    if (selectedCategories.length === availableCategories.length) {
       setSelectedCategories([]);
     } else {
-      setSelectedCategories([...VIOLATION_CATEGORIES]);
+      setSelectedCategories([...availableCategories]);
     }
   };
 
@@ -415,11 +425,12 @@ export default function GenerateReportModal({
     onClose();
   };
 
-  const filteredCategories = VIOLATION_CATEGORIES.filter(cat =>
-    cat.toLowerCase().includes(searchText.toLowerCase())
+  // Fuzzy search - matches if all words in search appear in category
+  const filteredCategories = availableCategories.filter(cat =>
+    fuzzyMatch(cat, searchText)
   );
 
-  const displayText = selectedCategories.length > 0 
+  const displayText = selectedCategories.length > 0
     ? `${selectedCategories.length} categor${selectedCategories.length === 1 ? 'y' : 'ies'} selected`
     : 'Select categories...';
 
@@ -427,7 +438,7 @@ export default function GenerateReportModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+      <div className="bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar relative rounded-lg">
         <div className="bg-sky p-6 flex justify-between items-center sticky top-0 z-10">
           <h2 className="text-2xl font-bold text-midnightNavy">
             Generate Report
@@ -499,7 +510,7 @@ export default function GenerateReportModal({
               <input
                 type="text"
                 value={displayText}
-                onFocus={() => !isGenerating && setShowDropdown(true)}
+                onClick={() => !isGenerating && setShowDropdown(!showDropdown)}
                 readOnly
                 disabled={isGenerating}
                 placeholder="Select categories..."
@@ -507,22 +518,22 @@ export default function GenerateReportModal({
               />
               <img src="/icon16.png" alt="" className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-            
+
             {showDropdown && !isGenerating && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div className="w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-3">
                   <div className="relative">
-                    <svg 
-                      className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-royal pointer-events-none" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <svg
+                      className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-royal pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                       />
                     </svg>
                     <input
@@ -541,7 +552,7 @@ export default function GenerateReportModal({
                 >
                   <input
                     type="checkbox"
-                    checked={selectedCategories.length === VIOLATION_CATEGORIES.length}
+                    checked={selectedCategories.length === availableCategories.length && availableCategories.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 cursor-pointer"
                   />
