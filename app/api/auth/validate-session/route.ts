@@ -12,7 +12,8 @@ export async function GET() {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError || !session) {
-            return NextResponse.json({ valid: false, reason: 'no_session' });
+            // No session is normal - user might be on login page
+            return NextResponse.json({ valid: true });
         }
 
         // Check if the user exists and their status using the auth user ID
@@ -22,9 +23,13 @@ export async function GET() {
             .eq('id', session.user.id)
             .single();
 
+        // If user is not found in users table, don't auto-logout
+        // This could happen during database migrations or when auth.users 
+        // and public.users are out of sync. The user can still use the app.
         if (userError || !userData) {
-            // User doesn't exist in the database - they were deleted
-            return NextResponse.json({ valid: false, reason: 'deleted' });
+            // User not in database - might be a sync issue, let them continue
+            // They'll be redirected properly by the dashboard pages if needed
+            return NextResponse.json({ valid: true });
         }
 
         // Check if the admin changed the user's email
@@ -46,4 +51,5 @@ export async function GET() {
         return NextResponse.json({ valid: true });
     }
 }
+
 
