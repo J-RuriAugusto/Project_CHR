@@ -239,7 +239,7 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                     const matchesDate = docket.dateReceived ? new Date(docket.dateReceived).toLocaleDateString().includes(term) : false;
 
                     // New expanded search fields
-                    const matchesViolation = docket.violationCategory.toLowerCase().includes(term);
+                    const matchesViolation = docket.violationCategories.some(c => c.toLowerCase().includes(term));
                     const matchesMode = docket.requestMode.toLowerCase().includes(term);
                     const matchesRights = docket.rights.some(r => r.toLowerCase().includes(term));
                     const matchesComplainants = docket.complainants.some(c => c.toLowerCase().includes(term));
