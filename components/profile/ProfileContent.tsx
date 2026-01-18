@@ -62,23 +62,38 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+    // Modal State
+    const [modal, setModal] = useState<{ isOpen: boolean; type: 'success' | 'error'; message: string }>({
+        isOpen: false,
+        type: 'success',
+        message: ''
+    });
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const supabase = createClient();
+
+    const showModal = (type: 'success' | 'error', message: string) => {
+        setModal({ isOpen: true, type, message });
+    };
+
+    const closeModal = () => {
+        setModal({ isOpen: false, type: 'success', message: '' });
+    };
 
     const handleUpdatePassword = async () => {
         // Basic Validation
         if (!oldPassword || !newPassword || !confirmPassword) {
-            alert('Please fill in all password fields.');
+            showModal('error', 'Please fill in all password fields.');
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            alert('New passwords do not match.');
+            showModal('error', 'New passwords do not match.');
             return;
         }
 
         if (newPassword.length < 6) {
-            alert('New password must be at least 6 characters long.');
+            showModal('error', 'New password must be at least 6 characters long.');
             return;
         }
 
@@ -88,17 +103,17 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
             const result = await updatePassword(userData.email, oldPassword, newPassword);
 
             if (result.success) {
-                alert('Password updated successfully!');
+                showModal('success', 'Password updated successfully!');
                 // Clear fields
                 setOldPassword('');
                 setNewPassword('');
                 setConfirmPassword('');
             } else {
-                alert(result.error);
+                showModal('error', result.error || 'Failed to update password.');
             }
         } catch (error) {
             console.error('Update password error:', error);
-            alert('An unexpected error occurred while updating password.');
+            showModal('error', 'An unexpected error occurred while updating password.');
         } finally {
             setIsUpdatingPassword(false);
         }
@@ -116,8 +131,7 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
             if (!result.success) {
                 console.error('Error sending reset link:', result.error);
                 setResetStatus('error');
-                // Optional: alert can still be used for serious errors, or just let the button show "Error"
-                alert('Error sending reset link: ' + result.error);
+                showModal('error', 'Error sending reset link: ' + result.error);
             } else {
                 setResetStatus('sent');
             }
@@ -148,11 +162,11 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
 
             // Validation
             if (!file.type.startsWith('image/')) {
-                alert('Please upload an image file (JPG, PNG, etc).');
+                showModal('error', 'Please upload an image file (JPG, PNG, etc).');
                 return;
             }
             if (file.size > 2 * 1024 * 1024) { // 2MB limit
-                alert('File size must be less than 2MB.');
+                showModal('error', 'File size must be less than 2MB.');
                 return;
             }
 
@@ -188,7 +202,7 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
 
         } catch (error: any) {
             console.error('Error uploading image:', error);
-            alert('Error uploading image: ' + (error.message || 'Unknown error'));
+            showModal('error', 'Error uploading image: ' + (error.message || 'Unknown error'));
         } finally {
             setUploading(false);
             if (fileInputRef.current) {
@@ -450,6 +464,34 @@ export default function ProfileContent({ userData, signOut }: ProfileContentProp
                     </div>
                 </div>
             </main>
+
+            {/* Success/Error Modal */}
+            {modal.isOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+                    <div className="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+                        <div className={`w-16 h-16 ${modal.type === 'success' ? 'bg-green-500' : 'bg-red-500'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                            {modal.type === 'success' ? (
+                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            ) : (
+                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            )}
+                        </div>
+                        <p className="text-gray-600 mb-6">
+                            {modal.message}
+                        </p>
+                        <button
+                            onClick={closeModal}
+                            className={`${modal.type === 'success' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold py-2 px-8 rounded-lg transition-colors`}
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
