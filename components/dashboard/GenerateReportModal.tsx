@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 interface GenerateReportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerate: (filters: { startYear: number; endYear: number; category: string }) => void;
+  onGenerate: (filters: { startYear: number; endYear: number; category: string; rights: string }) => void;
 }
 
 // Fuzzy search helper - matches if all search words appear in the text
@@ -21,7 +21,8 @@ function fuzzyMatch(text: string, search: string): boolean {
 async function fetchCasesFromAPI(
   startYear: number,
   endYear: number,
-  categories: string[]
+  categories: string[],
+  rights: string[]
 ) {
   const params = new URLSearchParams({
     startYear: startYear.toString(),
@@ -30,6 +31,10 @@ async function fetchCasesFromAPI(
 
   if (categories.length > 0) {
     params.append('categories', categories.join(','));
+  }
+
+  if (rights.length > 0) {
+    params.append('rights', rights.join(','));
   }
 
   const res = await fetch(`/api/reports/cases?${params.toString()}`);
@@ -49,6 +54,7 @@ async function generatePDFReport(filters: {
   startYear: number;
   endYear: number;
   category: string;
+  rights: string;
 }) {
   // @ts-ignore
   const { jsPDF } = window.jspdf;
@@ -62,10 +68,16 @@ async function generatePDFReport(filters: {
       ? []
       : filters.category.split(', ');
 
+  const selectedRights =
+    filters.rights === 'All Rights'
+      ? []
+      : filters.rights.split(', ');
+
   const cases = await fetchCasesFromAPI(
     filters.startYear,
     filters.endYear,
-    selectedCategories
+    selectedCategories,
+    selectedRights
   );
 
   if (!cases || cases.length === 0) {
@@ -143,13 +155,23 @@ async function generatePDFReport(filters: {
   // Format Categories properly with wrapping if needed
   const maxWidth = pageWidth - 40; // Leave margins on both sides
   doc.setFont(undefined, 'bold');
-  doc.text('Categories Included:', 20, y);
+  doc.text('Included Alleged Violations:', 20, y);
   y += 5;
   doc.setFont(undefined, 'normal');
   const categoriesValue = filters.category;
   const splitCategories = doc.splitTextToSize(categoriesValue, maxWidth);
   doc.text(splitCategories, 20, y);
   y += (splitCategories.length * 5) + 6;
+
+  // Format Rights Included
+  doc.setFont(undefined, 'bold');
+  doc.text('Included Rights Violated:', 20, y);
+  y += 5;
+  doc.setFont(undefined, 'normal');
+  const rightsValue = filters.rights;
+  const splitRights = doc.splitTextToSize(rightsValue, maxWidth);
+  doc.text(splitRights, 20, y);
+  y += (splitRights.length * 5) + 6;
 
   /* ===== EXEC SUMMARY ===== */
   doc.setFontSize(14);
@@ -501,6 +523,14 @@ export default function GenerateReportModal({
   const [loadingCategories, setLoadingCategories] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Rights state
+  const [selectedRights, setSelectedRights] = useState<string[]>([]);
+  const [rightsSearchText, setRightsSearchText] = useState('');
+  const [showRightsDropdown, setShowRightsDropdown] = useState(false);
+  const [availableRights, setAvailableRights] = useState<string[]>([]);
+  const [loadingRights, setLoadingRights] = useState(false);
+  const rightsDropdownRef = useRef<HTMLDivElement>(null);
+
   const yearOptions = Array.from({ length: 20 }, (_, i) => currentYear - i);
 
   // Fetch categories from database when modal opens
@@ -523,21 +553,44 @@ export default function GenerateReportModal({
     }
   }, [isOpen]);
 
+  // Fetch rights from database when modal opens
+  useEffect(() => {
+    if (isOpen && availableRights.length === 0) {
+      setLoadingRights(true);
+      fetch('/api/reports/rights')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setAvailableRights(data);
+            setSelectedRights(data); // Auto-select all
+          }
+        })
+        .catch(err => console.error('Failed to fetch rights:', err))
+        .finally(() => setLoadingRights(false));
+    } else if (isOpen && availableRights.length > 0 && selectedRights.length === 0) {
+      // Re-select all when reopening
+      setSelectedRights([...availableRights]);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
+      if (rightsDropdownRef.current && !rightsDropdownRef.current.contains(event.target as Node)) {
+        setShowRightsDropdown(false);
+      }
     };
 
-    if (showDropdown) {
+    if (showDropdown || showRightsDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showDropdown]);
+  }, [showDropdown, showRightsDropdown]);
 
   const handleCategoryToggle = (category: string) => {
     setSelectedCategories(prev => {
@@ -557,6 +610,24 @@ export default function GenerateReportModal({
     }
   };
 
+  const handleRightToggle = (right: string) => {
+    setSelectedRights(prev => {
+      if (prev.includes(right)) {
+        return prev.filter(r => r !== right);
+      } else {
+        return [...prev, right];
+      }
+    });
+  };
+
+  const handleSelectAllRights = () => {
+    if (selectedRights.length === availableRights.length) {
+      setSelectedRights([]);
+    } else {
+      setSelectedRights([...availableRights]);
+    }
+  };
+
   const handleGenerate = async () => {
     if (startYear > endYear) {
       setError('Start year must be before end year');
@@ -573,7 +644,11 @@ export default function GenerateReportModal({
         category:
           selectedCategories.length > 0
             ? selectedCategories.join(', ')
-            : 'All Categories'
+            : 'All Categories',
+        rights:
+          selectedRights.length > 0
+            ? selectedRights.join(', ')
+            : 'All Rights'
       };
 
       await generatePDFReport(filters);
@@ -593,6 +668,9 @@ export default function GenerateReportModal({
     setSelectedCategories([]);
     setSearchText('');
     setShowDropdown(false);
+    setSelectedRights([]);
+    setRightsSearchText('');
+    setShowRightsDropdown(false);
     setError('');
     setIsGenerating(false);
     onClose();
@@ -603,9 +681,18 @@ export default function GenerateReportModal({
     fuzzyMatch(cat, searchText)
   );
 
+  // Fuzzy search for rights
+  const filteredRights = availableRights.filter(right =>
+    fuzzyMatch(right, rightsSearchText)
+  );
+
   const displayText = selectedCategories.length > 0
     ? `${selectedCategories.length} categor${selectedCategories.length === 1 ? 'y' : 'ies'} selected`
     : 'Select categories...';
+
+  const rightsDisplayText = selectedRights.length > 0
+    ? `${selectedRights.length} right${selectedRights.length === 1 ? '' : 's'} selected`
+    : 'Select rights...';
 
   if (!isOpen) return null;
 
@@ -751,6 +838,88 @@ export default function GenerateReportModal({
                 ) : (
                   <div className="px-4 py-3 text-ash italic">
                     No matching categories
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="relative" ref={rightsDropdownRef}>
+            <label className="block text-graphite font-semibold mb-2 text-lg">
+              Rights Violated
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={rightsDisplayText}
+                onClick={() => !isGenerating && setShowRightsDropdown(!showRightsDropdown)}
+                readOnly
+                disabled={isGenerating}
+                placeholder="Select rights..."
+                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-coal placeholder-ash cursor-pointer disabled:opacity-50"
+              />
+              <img src="/icon16.png" alt="" className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {showRightsDropdown && !isGenerating && (
+              <div className="w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-3">
+                  <div className="relative">
+                    <svg
+                      className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-royal pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    <input
+                      type="text"
+                      value={rightsSearchText}
+                      onChange={(e) => setRightsSearchText(e.target.value)}
+                      placeholder="Search rights..."
+                      className="w-full pl-9 pr-3 py-2 text-black text-sm border border-royal rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  onClick={handleSelectAllRights}
+                  className="px-4 py-3 hover:bg-sky cursor-pointer border-b border-gray-200 flex items-center gap-3"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedRights.length === availableRights.length && availableRights.length > 0}
+                    onChange={handleSelectAllRights}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-coal font-semibold">Select All</span>
+                </div>
+
+                {filteredRights.length > 0 ? (
+                  filteredRights.map((right) => (
+                    <div
+                      key={right}
+                      onClick={() => handleRightToggle(right)}
+                      className="px-4 py-3 hover:bg-sky cursor-pointer flex items-center gap-3"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRights.includes(right)}
+                        onChange={() => handleRightToggle(right)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-coal">{right}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-ash italic">
+                    No matching rights
                   </div>
                 )}
               </div>

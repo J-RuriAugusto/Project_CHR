@@ -22,8 +22,9 @@ export async function GET(req: Request) {
     const startYear = Number(searchParams.get('startYear'));
     const endYear = Number(searchParams.get('endYear'));
     const categoriesParam = searchParams.get('categories');
+    const rightsParam = searchParams.get('rights');
 
-    console.log('Report params:', { startYear, endYear, categoriesParam });
+    console.log('Report params:', { startYear, endYear, categoriesParam, rightsParam });
 
     if (!startYear || !endYear) {
       return NextResponse.json(
@@ -36,15 +37,20 @@ export async function GET(req: Request) {
       ? categoriesParam.split(',').map(c => c.trim()).filter(c => c)
       : [];
 
+    const rights = rightsParam
+      ? rightsParam.split(',').map(r => r.trim()).filter(r => r)
+      : [];
+
+    // Fetch dockets with their rights
     let query = supabase
       .from('dockets')
-      .select('*')
+      .select(`
+        *,
+        docket_rights (right_name),
+        docket_violations (category_name)
+      `)
       .gte('date_received', `${startYear}-01-01`)
       .lte('date_received', `${endYear}-12-31`);
-
-    if (categories.length > 0) {
-      query = query.in('violation_category', categories);
-    }
 
     const { data, error } = await query;
 
@@ -56,8 +62,30 @@ export async function GET(req: Request) {
       );
     }
 
-    console.log('Query successful, returned rows:', data?.length || 0);
-    return NextResponse.json(data || []);
+    // Transform data to include rights array and violation categories
+    let transformedData = (data || []).map(docket => ({
+      ...docket,
+      rightsViolated: docket.docket_rights?.map((r: any) => r.right_name) || [],
+      violation_category: docket.docket_violations?.map((v: any) => v.category_name).join(', ') || docket.violation_category || ''
+    }));
+
+    // Filter by categories if specified (check against docket_violations)
+    if (categories.length > 0) {
+      transformedData = transformedData.filter(docket => {
+        const docketCategories = docket.docket_violations?.map((v: any) => v.category_name) || [];
+        return categories.some(cat => docketCategories.includes(cat));
+      });
+    }
+
+    // Filter by rights if specified
+    if (rights.length > 0) {
+      transformedData = transformedData.filter(docket => {
+        return rights.some(right => docket.rightsViolated.includes(right));
+      });
+    }
+
+    console.log('Query successful, returned rows:', transformedData.length);
+    return NextResponse.json(transformedData);
   } catch (err: any) {
     console.error('API error:', err.message);
     return NextResponse.json(
