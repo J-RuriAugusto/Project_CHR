@@ -127,12 +127,14 @@ export async function getDockets(userId?: string): Promise<DocketListItem[]> {
         // Format assigned staff
         let assignedTo = 'Unassigned';
         if (docket.docket_staff && docket.docket_staff.length > 0) {
-            const staffNames = docket.docket_staff.map((ds: any) =>
-                `${ds.users.first_name} ${ds.users.last_name}`
-            );
+            const staffNames = docket.docket_staff
+                .filter((ds: any) => ds.users) // Filter out null users
+                .map((ds: any) =>
+                    `${ds.users.first_name} ${ds.users.last_name}`
+                );
             if (staffNames.length === 1) {
                 assignedTo = staffNames[0];
-            } else {
+            } else if (staffNames.length > 1) {
                 assignedTo = `${staffNames[0]} +${staffNames.length - 1} more`;
             }
         }
@@ -294,11 +296,13 @@ export async function getDocketDetails(id: string) {
             sectors: p.docket_party_sectors.map((s: any) => s.sectors.name)
         }));
 
-    // Process staff
-    const staff = docket.docket_staff.map((ds: any) => ({
-        userId: ds.users.id,
-        email: ds.users.email
-    }));
+    // Process staff (filter out entries with null users)
+    const staff = docket.docket_staff
+        .filter((ds: any) => ds.users)
+        .map((ds: any) => ({
+            userId: ds.users.id,
+            email: ds.users.email
+        }));
 
     // Process categories (now from junction table)
     const violationCategories = categories?.map((c: any) => c.category_name) || [];
