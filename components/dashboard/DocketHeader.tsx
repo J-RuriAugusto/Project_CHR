@@ -31,7 +31,9 @@ export default function DocketHeader({ userData, onDocketClick }: DocketHeaderPr
     const [showNotifications, setShowNotifications] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [rightOffset, setRightOffset] = useState(256);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const rightSectionRef = useRef<HTMLDivElement>(null);
 
     // Fetch unread count on mount and periodically
     useEffect(() => {
@@ -74,6 +76,28 @@ export default function DocketHeader({ userData, onDocketClick }: DocketHeaderPr
             setIsSearchOpen(!!query);
         }
     }, [searchParams, isSearching]);
+
+    // Measure the right section width dynamically
+    useEffect(() => {
+        const measureWidth = () => {
+            if (rightSectionRef.current) {
+                // Get the width of notification + user info (excluding search button)
+                const children = rightSectionRef.current.children;
+                let width = 0;
+                // Skip the first child (search button), sum the rest
+                for (let i = 1; i < children.length; i++) {
+                    width += (children[i] as HTMLElement).offsetWidth;
+                }
+                // Add gaps (gap-4 = 16px between elements)
+                width += (children.length - 2) * 16;
+                // Add some padding
+                setRightOffset(width + 24);
+            }
+        };
+        measureWidth();
+        window.addEventListener('resize', measureWidth);
+        return () => window.removeEventListener('resize', measureWidth);
+    }, [userData]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -136,7 +160,8 @@ export default function DocketHeader({ userData, onDocketClick }: DocketHeaderPr
             {/* Expanded Search Bar Overlay */}
             {isSearchOpen && (
                 <div
-                    className="absolute left-6 right-64 top-1/2 -translate-y-1/2 transition-all duration-300"
+                    className="absolute left-6 top-1/2 -translate-y-1/2 transition-all duration-300"
+                    style={{ right: `${rightOffset}px` }}
                     onMouseEnter={() => !isSearching && setIsSearchOpen(true)}
                     onMouseLeave={() => !searchQuery && !isSearching && setIsSearchOpen(false)}
                 >
@@ -156,7 +181,7 @@ export default function DocketHeader({ userData, onDocketClick }: DocketHeaderPr
             )}
 
             {/* USER INFO */}
-            <div className="flex items-center gap-4">
+            <div ref={rightSectionRef} className="flex items-center gap-4">
                 {/* Search Button */}
                 <div
                     className="relative flex items-center"

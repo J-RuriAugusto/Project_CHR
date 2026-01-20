@@ -217,7 +217,17 @@ export default function DocketContent({ userData, signOut, users, lookups }: Doc
                     const matchesAssigned = docket.assignedTo.toLowerCase().includes(term);
                     const matchesDate = docket.dateReceived ? new Date(docket.dateReceived).toLocaleDateString().includes(term) : false;
 
-                    return matchesNumber || matchesType || matchesStatus || matchesAssigned || matchesDate;
+                    // Expanded search fields
+                    const matchesViolation = docket.violationCategories.some(c => c.toLowerCase().includes(term));
+                    const matchesMode = docket.requestMode.toLowerCase().includes(term);
+                    const matchesRights = docket.rights.some(r => r.toLowerCase().includes(term));
+                    const matchesComplainants = docket.complainants.some(c => c.toLowerCase().includes(term));
+                    const matchesParties = docket.parties.some(p => p.toLowerCase().includes(term));
+                    const matchesSectors = docket.sectors.some(s => s.toLowerCase().includes(term));
+
+                    return matchesNumber || matchesType || matchesStatus || matchesAssigned || matchesDate ||
+                        matchesViolation || matchesMode || matchesRights || matchesComplainants ||
+                        matchesParties || matchesSectors;
                 });
             }
         }
