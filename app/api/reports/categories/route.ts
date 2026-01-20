@@ -16,11 +16,11 @@ export async function GET() {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Fetch unique violation categories from dockets
+        // Fetch unique violation categories from the docket_violations junction table
         const { data, error } = await supabase
-            .from('dockets')
-            .select('violation_category')
-            .not('violation_category', 'is', null);
+            .from('docket_violations')
+            .select('category_name')
+            .not('category_name', 'is', null);
 
         if (error) {
             console.error('Supabase error:', error);
@@ -33,7 +33,7 @@ export async function GET() {
         // Extract unique categories and sort them
         const uniqueCategories = Array.from(new Set(
             data
-                .map(d => d.violation_category)
+                .map(d => d.category_name)
                 .filter((c): c is string => typeof c === 'string' && c.trim() !== '')
         )).sort();
 
